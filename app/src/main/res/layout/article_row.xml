@@ -11,7 +11,7 @@
         android:id="@+id/card"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        app:cardBackgroundColor="#B4B4B4"
+        app:cardBackgroundColor="@color/cardBackgroundLight"
         app:cardCornerRadius="5dp">
 
         <RelativeLayout
@@ -27,8 +27,8 @@
                 android:paddingStart="6dp"
                 android:paddingEnd="6dp"
                 android:paddingBottom="6dp"
-                android:textColor="@color/colorPrimaryDark"
-                android:textSize="20sp"
+                android:textColor="@color/textDark"
+                android:textSize="18sp"
                 android:textStyle="bold" />
 
             <androidx.appcompat.widget.AppCompatTextView
@@ -37,10 +37,9 @@
                 android:layout_height="wrap_content"
                 android:layout_alignParentEnd="true"
                 android:paddingStart="6dp"
-                android:paddingTop="4sp"
+                android:paddingTop="2sp"
                 android:paddingEnd="6dp"
-                android:text="1h"
-                android:textColor="@color/colorPrimaryDark"
+                android:textColor="@color/textDark"
                 android:textSize="16sp" />
 
             <com.google.android.material.card.MaterialCardView
@@ -65,15 +64,17 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_below="@+id/image_card"
-                android:textColor="@color/colorPrimary"
-                android:textStyle="bold" />
+                android:textColor="@color/textDark"
+                android:textStyle="bold"
+                android:textSize="20sp"/>
 
             <androidx.appcompat.widget.AppCompatTextView
                 android:id="@+id/description"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_below="@+id/title"
-                android:textColor="@color/colorPrimary" />
+                android:textColor="@color/textDark"
+                android:textSize="14sp"/>
 
         </RelativeLayout>
 

@@ -8,7 +8,6 @@ import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.csc306.coursework.R
 import com.csc306.coursework.model.Article
-import com.csc306.coursework.model.Category
 import com.google.android.material.snackbar.Snackbar
 import com.squareup.picasso.Picasso
 
@@ -24,8 +23,9 @@ class ArticleListAdapter(private val articles: MutableList<Article>) :
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val article: Article = articles[position]
         holder.sourceTextView.text = article.source
-//        holder.publishedTextView.text = article.source
-        Picasso.get().load(article.imageURL).into(holder.imageView);
+        holder.publishedTextView.text = "1h"
+//        Picasso.get().load(article.imageURL).into(holder.imageView)
+        holder.imageView.setImageResource(article.image)
         holder.titleTextView.text = article.title
         holder.descriptionTextView.text = article.description
     }

@@ -5,7 +5,7 @@ import java.time.LocalDateTime
 class Article(
     val source: String,
     val published: LocalDateTime,
-    val imageURL: String,
+    val image: Int,
     val title: String,
     val description: String,
     val articleURL: String
