@@ -14,3 +14,4 @@
 .cxx
 .idea
 /app/src/main/res/drawable/*.jpg
+/app/google-services.json

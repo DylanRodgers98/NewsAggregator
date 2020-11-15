@@ -14,9 +14,9 @@ class FirstTimeSetupActivity : AppCompatActivity() {
 
     private val newsApi: NewsApiRepository = NewsApiRepository(getString(R.string.api_key))
 
-    private var disposableApiCall: Disposable? = null
-
     private val database: DatabaseManager = DatabaseManager(this)
+
+    private var disposableApiCall: Disposable? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -27,8 +27,9 @@ class FirstTimeSetupActivity : AppCompatActivity() {
         disposableApiCall = newsApi.getSources(language = Language.valueOf(Locale.getDefault().language))
             .subscribeOn(Schedulers.io())
             .toFlowable()
-            .subscribe({ database.updateSources(it.sources) },
-                { err -> Log.e(localClassName, "An error occurred when getting source info: ", err) })
+            .subscribe({ database.updateSources(it.sources) }, { err ->
+                Log.e(localClassName, "An error occurred when getting source info:", err)
+            })
     }
 
     override fun onStop() {

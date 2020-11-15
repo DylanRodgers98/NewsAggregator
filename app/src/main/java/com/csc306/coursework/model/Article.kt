@@ -10,5 +10,5 @@ class Article(
     val description: String,
     val articleURL: String
 ) {
-    val titleKeywords: Map<String, Double>? = null
+    var titleKeywords: Map<String, Float>? = null
 }

@@ -4,6 +4,7 @@ import android.content.ContentValues
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
+import com.csc306.coursework.model.LikabilityDTO
 import com.dfl.newsapi.model.SourceDto
 import java.util.*
 
@@ -11,11 +12,13 @@ class DatabaseManager(context: Context) :
     SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
 
     override fun onCreate(db: SQLiteDatabase) {
-        db.execSQL("CREATE TABLE $TABLE_SOURCE($COLUMN_ID TEXT PRIMARY KEY, $COLUMN_CATEGORY TEXT NOT NULL)")
+        db.execSQL("CREATE TABLE $TABLE_SOURCE($COLUMN_ID INTEGER PRIMARY KEY, $COLUMN_SOURCE_ID TEXT NOT NULL, $COLUMN_CATEGORY TEXT NOT NULL)")
+        db.execSQL("CREATE TABLE $TABLE_SWIPED_KEYWORD($COLUMN_ID INTEGER PRIMARY KEY, $COLUMN_KEYWORD TEXT NOT NULL, $COLUMN_TOTAL_SALIENCE REAL NOT NULL, $COLUMN_COUNT REAL NOT NULL)") // COLUMN_COUNT must be of type REAL so that TOTAL_SALIENCE / COUNT can return a floating point number
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
         db.execSQL("DROP TABLE IF EXISTS $TABLE_SOURCE")
+        db.execSQL("DROP TABLE IF EXISTS $TABLE_SWIPED_KEYWORD")
         onCreate(db)
     }
 
@@ -49,12 +52,32 @@ class DatabaseManager(context: Context) :
         return null
     }
 
+    fun getLikabilityForKeywords(keywords: Collection<String>): List<LikabilityDTO> {
+        val query = "SELECT $COLUMN_KEYWORD, $COLUMN_TOTAL_SALIENCE / $COLUMN_COUNT FROM $TABLE_SWIPED_KEYWORD WHERE $COLUMN_KEYWORD IN (?)"
+        val likabilityDTOs: MutableList<LikabilityDTO> = mutableListOf()
+        this.writableDatabase.rawQuery(query, arrayOf(keywords.joinToString())).use { cursor ->
+            if (cursor.moveToFirst()) {
+                do {
+                    val keyword: String = cursor.getString(0)
+                    val likability: Float = cursor.getFloat(1)
+                    likabilityDTOs.add(LikabilityDTO(keyword, likability))
+                } while (cursor.moveToNext())
+            }
+        }
+        return likabilityDTOs
+    }
+
     companion object {
         const val DATABASE_NAME: String = "CSC306_COURSEWORK_DATABASE"
         const val DATABASE_VERSION: Int = 1
         const val TABLE_SOURCE: String = "SOURCE"
         const val COLUMN_ID: String = "ID"
+        const val COLUMN_SOURCE_ID: String = "SOURCE_ID"
         const val COLUMN_CATEGORY: String = "CATEGORY"
+        const val TABLE_SWIPED_KEYWORD: String = "SWIPED_KEYWORD"
+        const val COLUMN_KEYWORD: String = "KEYWORD"
+        const val COLUMN_TOTAL_SALIENCE: String = "TOTAL_SALIENCE"
+        const val COLUMN_COUNT: String = "COUNT"
     }
 
 }
