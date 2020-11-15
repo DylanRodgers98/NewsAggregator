@@ -46,8 +46,7 @@ class MainActivity : AppCompatActivity() {
             Article(
                 "BBC News",
                 LocalDateTime.now(),
-//                "https://ichef.bbci.co.uk/news/800/cpsprodpb/B1F6/production/_115085554_gettyimages-1229248614-1.jpg",
-                R.drawable.bbc,
+                "https://ichef.bbci.co.uk/news/800/cpsprodpb/B1F6/production/_115085554_gettyimages-1229248614-1.jpg",
                 "Coronavirus: Russia steps up restrictions as infections surge",
                 "Masks must be worn in all public areas and bars and restaurants should close overnight, officials say.",
                 ""
@@ -55,8 +54,7 @@ class MainActivity : AppCompatActivity() {
             Article(
                 "TMZ",
                 LocalDateTime.now(),
-//                "https://imagez.tmz.com/image/cd/16by9/2020/10/29/cd4b3de3ea8f4d35a13b2ac513b0638e_xl.jpg",
-                R.drawable.tmz,
+                "https://imagez.tmz.com/image/cd/16by9/2020/10/29/cd4b3de3ea8f4d35a13b2ac513b0638e_xl.jpg",
                 "Scarlett Johansson and Colin Jost Married in Private Ceremony - TMZ",
                 "Scarlett Johansson and Colin Jost have tied the knot.",
                 ""
@@ -64,8 +62,7 @@ class MainActivity : AppCompatActivity() {
             Article(
                 "National Geographic",
                 LocalDateTime.now(),
-//                "https://www.nationalgeographic.com/content/dam/science/2020/08/17/environmental-policy-tracker/environmental-policy-tracker-1169904873.jpg",
-                R.drawable.natgeo,
+                "https://www.nationalgeographic.com/content/dam/science/2020/08/17/environmental-policy-tracker/environmental-policy-tracker-1169904873.jpg",
                 "Trump allows logging in Alaska’s Tongass National Forest",
                 "A running list of the 2020 presidential candidates' dueling visions for U.S. environmental policy.",
                 ""
