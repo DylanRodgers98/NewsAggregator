@@ -7,11 +7,14 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.csc306.coursework.R
+import com.csc306.coursework.database.DatabaseManager
 import com.csc306.coursework.model.Category
 import com.google.android.material.snackbar.Snackbar
 
-class CategorySelectionAdapter(private val categories: MutableList<Category>) :
-    RecyclerView.Adapter<CategorySelectionAdapter.ViewHolder>() {
+class CategorySelectionAdapter(
+    private val categories: MutableList<Category>,
+    private val database: DatabaseManager
+) : RecyclerView.Adapter<CategorySelectionAdapter.ViewHolder>() {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val inflater = LayoutInflater.from(parent.context)
