@@ -11,4 +11,8 @@
     <string name="technology">Technology</string>
     <string name="follow">Follow</string>
     <string name="likes">Likes</string>
+    <string name="days_ago">d ago</string>
+    <string name="hours_ago">h ago</string>
+    <string name="minutes_ago">m ago</string>
+    <string name="seconds_ago">s ago</string>
 </resources>
