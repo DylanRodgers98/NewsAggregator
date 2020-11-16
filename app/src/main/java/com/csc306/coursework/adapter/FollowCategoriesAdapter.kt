@@ -30,7 +30,14 @@ class FollowCategoriesAdapter(
         val category: Category = categories[position]
         holder.imgView.setImageResource(category.imageDrawable)
         holder.checkBox.text = category.name
-        holder.checkBox.isChecked = checkBoxStateArray.get(position, false)
+        holder.checkBox.isChecked = isFollowingCategory(category.name, position)
+    }
+
+    private fun isFollowingCategory(categoryName: String, position: Int): Boolean {
+        val isFollowing = context.getSharedPreferences(CATEGORIES_FOLLOWING, Context.MODE_PRIVATE)
+            .getBoolean(categoryName, false)
+        checkBoxStateArray.put(position, isFollowing)
+        return isFollowing
     }
 
     override fun getItemCount(): Int = categories.size

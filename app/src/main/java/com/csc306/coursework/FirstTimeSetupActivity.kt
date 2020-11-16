@@ -12,11 +12,9 @@ import java.util.*
 
 class FirstTimeSetupActivity : AppCompatActivity() {
 
-    private val newsApi: NewsApiRepository = NewsApiRepository(getString(R.string.api_key))
+    private val newsApi: NewsApiRepository = NewsApiRepository("bf38b882f6a6421096d8acd384d33b71")
 
-    private val database: DatabaseManager = DatabaseManager(this)
-
-    private var disposableApiCall: Disposable? = null
+    private val databaseManager: DatabaseManager = DatabaseManager(this)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -24,17 +22,18 @@ class FirstTimeSetupActivity : AppCompatActivity() {
     }
 
     private fun updateSources() {
-        disposableApiCall = newsApi.getSources(language = Language.valueOf(Locale.getDefault().language))
+        val defaultLanguage: String = Locale.getDefault().language
+        val languageCode: Language = Language.valueOf(defaultLanguage.toUpperCase(Locale.getDefault()))
+        newsApi.getSources(language = languageCode)
             .subscribeOn(Schedulers.io())
             .toFlowable()
-            .subscribe({ database.updateSources(it.sources) }, { err ->
-                Log.e(localClassName, "An error occurred when getting source info:", err)
+            .blockingSubscribe({
+                Log.i(localClassName, "Updating ${it.sources.size} sources in database")
+                databaseManager.updateSources(it.sources)
+                Log.i(localClassName, "Sources updated in database")
+            }, { err ->
+                Log.e(localClassName, "An error occurred when updating source info:", err)
             })
-    }
-
-    override fun onStop() {
-        super.onStop()
-        disposableApiCall?.dispose()
     }
 
 }

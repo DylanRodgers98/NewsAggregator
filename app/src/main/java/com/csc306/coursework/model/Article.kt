@@ -9,9 +9,9 @@ import java.util.*
 class Article(
     val source: String,
     val publishDate: LocalDateTime,
-    val imageURL: String,
+    val imageURL: String?,
     val title: String,
-    val description: String,
+    val description: String?,
     val articleURL: String
 ) {
     private var titleKeywords: Map<String, Float>? = null
