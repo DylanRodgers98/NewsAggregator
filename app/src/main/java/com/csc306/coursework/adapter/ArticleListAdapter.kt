@@ -48,7 +48,10 @@ class ArticleListAdapter(private val articles: MutableList<Article>, private val
             return minutesAgo.toString() + context.getString(R.string.minutes_ago)
         }
         val secondsAgo: Long = TimeUnit.MILLISECONDS.toSeconds(diff)
-        return secondsAgo.toString() + context.getString(R.string.seconds_ago)
+        if (secondsAgo > 0) {
+            return secondsAgo.toString() + context.getString(R.string.seconds_ago)
+        }
+        return context.getString(R.string.now)
     }
 
     override fun getItemCount(): Int = articles.size

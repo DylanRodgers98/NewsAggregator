@@ -16,4 +16,5 @@
     <string name="hours_ago">h ago</string>
     <string name="minutes_ago">m ago</string>
     <string name="seconds_ago">s ago</string>
+    <string name="now">Now</string>
 </resources>
