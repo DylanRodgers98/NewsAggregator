@@ -57,11 +57,10 @@ class DatabaseManager(context: Context) :
         throw SQLiteException("Found no sources in database. Has first time setup taken place?")
     }
 
-    fun updateLikabilityForKeywords(titleKeywords: Map<String, Float>) {
+    fun updateLikabilityForKeywords(titleKeywords: Map<String, Float>, positive: Boolean) {
         doWithinTransaction(this.writableDatabase) { db ->
             titleKeywords.entries.forEach {
                 val keyword: String = it.key
-                val salience: Float = it.value
 
                 var currentTotalSalience = 0.0F
                 var currentCount = 0.0F
@@ -74,9 +73,16 @@ class DatabaseManager(context: Context) :
                     }
                 }
 
+                val salience: Float = it.value
+                val newTotalSalience = if (positive) {
+                    currentTotalSalience + salience
+                } else {
+                    currentTotalSalience - salience
+                }
+
                 val values = ContentValues()
                 values.put(COLUMN_KEYWORD, keyword)
-                values.put(COLUMN_TOTAL_SALIENCE, currentTotalSalience + salience)
+                values.put(COLUMN_TOTAL_SALIENCE, newTotalSalience)
                 values.put(COLUMN_COUNT, currentCount + 1)
                 db.insertWithOnConflict(TABLE_SWIPED_KEYWORD,null, values, SQLiteDatabase.CONFLICT_REPLACE)
             }
