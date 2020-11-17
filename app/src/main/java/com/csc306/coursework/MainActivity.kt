@@ -57,6 +57,10 @@ class MainActivity : AppCompatActivity() {
                 recyclerView.adapter = ArticleListAdapter(getArticles(), this)
                 return true
             }
+            R.id.toolbar_settings -> {
+                startActivity(Intent(applicationContext, SettingsActivity::class.java))
+                return true
+            }
             R.id.toolbar_log_out -> {
                 mAuth.signOut()
                 startActivity(Intent(applicationContext, AuthenticationActivity::class.java))
