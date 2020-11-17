@@ -1,6 +1,7 @@
 package com.csc306.coursework
 
 import android.annotation.SuppressLint
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
@@ -28,6 +29,7 @@ class FirstTimeSetupActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_recycler_and_toolbar)
 
+        clearFollowedCategories()
         updateSources()
 
         val toolbar: Toolbar = findViewById(R.id.toolbar)
@@ -50,6 +52,13 @@ class FirstTimeSetupActivity : AppCompatActivity() {
             return true
         }
         return super.onOptionsItemSelected(item)
+    }
+
+    private fun clearFollowedCategories() {
+        getSharedPreferences(FollowCategoriesAdapter.CATEGORIES_FOLLOWING, Context.MODE_PRIVATE)
+            .edit()
+            .clear()
+            .apply()
     }
 
     @SuppressLint("CheckResult")
