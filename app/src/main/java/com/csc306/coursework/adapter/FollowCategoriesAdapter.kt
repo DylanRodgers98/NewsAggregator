@@ -12,13 +12,14 @@ import com.csc306.coursework.R
 import com.csc306.coursework.database.DatabaseManager
 import com.csc306.coursework.model.Category
 import com.google.android.material.snackbar.Snackbar
+import java.util.*
 
 class FollowCategoriesAdapter(
-    private val categories: MutableList<Category>,
+    private val categories: Array<Category>,
     private val context: Context
 ) : RecyclerView.Adapter<FollowCategoriesAdapter.ViewHolder>() {
 
-    private val checkBoxStateArray = SparseBooleanArray()
+    private val checkBoxState: Array<Pair<Category, Boolean>?> = arrayOfNulls(Category.values().size)
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val inflater = LayoutInflater.from(parent.context)
@@ -28,15 +29,15 @@ class FollowCategoriesAdapter(
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val category: Category = categories[position]
-        holder.imgView.setImageResource(category.imageDrawable)
-        holder.checkBox.text = category.name
-        holder.checkBox.isChecked = isFollowingCategory(category.name, position)
+        holder.imgView.setImageResource(category.imageDrawableResource)
+        holder.checkBox.text = context.getString(category.nameStringResource)
+        holder.checkBox.isChecked = isFollowingCategory(category, position)
     }
 
-    private fun isFollowingCategory(categoryName: String, position: Int): Boolean {
+    private fun isFollowingCategory(category: Category, position: Int): Boolean {
         val isFollowing = context.getSharedPreferences(CATEGORIES_FOLLOWING, Context.MODE_PRIVATE)
-            .getBoolean(categoryName, false)
-        checkBoxStateArray.put(position, isFollowing)
+            .getBoolean(category.toString(), false)
+        checkBoxState[position] = Pair(category, isFollowing)
         return isFollowing
     }
 
@@ -48,13 +49,14 @@ class FollowCategoriesAdapter(
 
         init {
             checkBox.setOnClickListener { view ->
-                val isAlreadyChecked = checkBoxStateArray.get(adapterPosition, false)
-                checkBox.isChecked = !isAlreadyChecked
-                checkBoxStateArray.put(adapterPosition, !isAlreadyChecked)
+                val state: Pair<Category, Boolean> = checkBoxState[adapterPosition]!!
+                val category = state.first
+                val isFollowing = state.second
 
-                context.getSharedPreferences(CATEGORIES_FOLLOWING, Context.MODE_PRIVATE)
-                    .edit()
-                    .putBoolean(checkBox.text.toString(), checkBox.isChecked)
+                checkBox.isChecked = !isFollowing
+                checkBoxState[adapterPosition] = Pair(category, checkBox.isChecked)
+                context.getSharedPreferences(CATEGORIES_FOLLOWING, Context.MODE_PRIVATE).edit()
+                    .putBoolean(category.toString(), checkBox.isChecked)
                     .apply()
 
                 val nowOrNoLonger: String = if (checkBox.isChecked) "now" else "no longer"

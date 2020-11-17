@@ -1,5 +1,6 @@
 package com.csc306.coursework.adapter
 
+import android.content.Context
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -11,8 +12,10 @@ import com.csc306.coursework.database.DatabaseManager
 import com.csc306.coursework.model.Category
 import com.google.android.material.snackbar.Snackbar
 
-class CategorySelectionAdapter(private val categories: MutableList<Category>) :
-    RecyclerView.Adapter<CategorySelectionAdapter.ViewHolder>() {
+class CategorySelectionAdapter(
+    private val categories: Array<Category>,
+    private val context: Context
+) : RecyclerView.Adapter<CategorySelectionAdapter.ViewHolder>() {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val inflater = LayoutInflater.from(parent.context)
@@ -22,8 +25,8 @@ class CategorySelectionAdapter(private val categories: MutableList<Category>) :
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val category: Category = categories[position]
-        holder.imgView.setImageResource(category.imageDrawable)
-        holder.textView.text = category.name
+        holder.imgView.setImageResource(category.imageDrawableResource)
+        holder.textView.text = context.getString(category.nameStringResource)
     }
 
     override fun getItemCount(): Int = categories.size
