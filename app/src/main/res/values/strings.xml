@@ -17,4 +17,10 @@
     <string name="minutes_ago">m ago</string>
     <string name="seconds_ago">s ago</string>
     <string name="now">Now</string>
+    <string name="failed_login">Login failed. Please check username or password and try again.</string>
+    <string name="failed_sign_up">Sign up failed. Please check username or password and try again.</string>
+    <string name="email">Email</string>
+    <string name="password">Password</string>
+    <string name="login">Log In</string>
+    <string name="sign_up">Sign Up</string>
 </resources>
