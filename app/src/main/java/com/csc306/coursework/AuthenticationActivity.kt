@@ -29,25 +29,11 @@ class AuthenticationActivity : AppCompatActivity() {
         if (mAuth.currentUser != null) {
             startActivity(Intent(applicationContext, MainActivity::class.java))
         } else {
-            clearTextBoxes()
             val logInButton: Button = findViewById(R.id.btn_login)
             logInButton.setOnClickListener { view -> logIn(view) }
             val signUpButton: Button = findViewById(R.id.btn_sign_up)
             signUpButton.setOnClickListener { view -> signUp(view) }
         }
-    }
-
-    private fun clearTextBoxes() {
-        getEmailTextView().text = ""
-        getPasswordTextView().text = ""
-    }
-
-    private fun getEmailTextView(): TextView {
-        return findViewById(R.id.input_email)
-    }
-
-    private fun getPasswordTextView(): TextView {
-        return findViewById(R.id.input_password)
     }
 
     private fun logIn(view: View) {
@@ -66,8 +52,12 @@ class AuthenticationActivity : AppCompatActivity() {
         closeKeyboard()
         val email: String = getEmailTextView().text.toString()
         val password: String = getPasswordTextView().text.toString()
-        mAuth.createUserWithEmailAndPassword(email, password)
-            .addOnCompleteListener(getOnCompleteListener(view, getString(R.string.failed_sign_up)))
+        if (TextUtils.isEmpty(email) || TextUtils.isEmpty(password)) {
+            Snackbar.make(view, getString(R.string.empty_auth), Snackbar.LENGTH_LONG).show()
+        } else {
+            mAuth.createUserWithEmailAndPassword(email, password)
+                .addOnCompleteListener(getOnCompleteListener(view, getString(R.string.failed_sign_up)))
+        }
     }
 
     private fun closeKeyboard() {
@@ -78,6 +68,7 @@ class AuthenticationActivity : AppCompatActivity() {
     private fun getOnCompleteListener(view: View, errorMessage: String): OnCompleteListener<AuthResult> {
         return OnCompleteListener {
             if (it.isSuccessful) {
+                clearTextBoxes()
                 val isNewUser: Boolean = it.result!!.additionalUserInfo!!.isNewUser
                 val activity = if (isNewUser) FirstTimeSetupActivity::class.java else MainActivity::class.java
                 startActivity(Intent(applicationContext, activity))
@@ -85,6 +76,19 @@ class AuthenticationActivity : AppCompatActivity() {
                 Snackbar.make(view, errorMessage, Snackbar.LENGTH_LONG).show()
             }
         }
+    }
+
+    private fun clearTextBoxes() {
+        getEmailTextView().text = ""
+        getPasswordTextView().text = ""
+    }
+
+    private fun getEmailTextView(): TextView {
+        return findViewById(R.id.input_email)
+    }
+
+    private fun getPasswordTextView(): TextView {
+        return findViewById(R.id.input_password)
     }
 
 }

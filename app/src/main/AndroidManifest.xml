@@ -22,13 +22,7 @@
         </activity>
         <activity android:name=".FirstTimeSetupActivity" />
         <activity android:name=".MainActivity" />
-        <activity
-            android:name=".SettingsActivity"
-            android:parentActivityName=".MainActivity" />
-
-        <meta-data
-            android:name="android.support.PARENT_ACTIVITY"
-            android:value=".MainActivity" />
+        <activity android:name=".SettingsActivity" />
     </application>
 
 </manifest>

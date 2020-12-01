@@ -1,7 +1,6 @@
 package com.csc306.coursework
 
 import android.annotation.SuppressLint
-import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
@@ -12,33 +11,47 @@ import androidx.appcompat.widget.Toolbar
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.csc306.coursework.adapter.FollowCategoriesAdapter
+import com.csc306.coursework.database.CategoriesFollowingValueEventListener
 import com.csc306.coursework.database.DatabaseManager
-import com.csc306.coursework.model.Category
+import com.csc306.coursework.database.RealtimeDatabaseManager
 import com.dfl.newsapi.NewsApiRepository
 import com.dfl.newsapi.enums.Language
+import com.google.firebase.auth.FirebaseAuth
 import io.reactivex.schedulers.Schedulers
 import java.util.*
 
 class FirstTimeSetupActivity : AppCompatActivity() {
 
-    private val mNewsApi: NewsApiRepository = NewsApiRepository("bf38b882f6a6421096d8acd384d33b71")
-
     private val mDatabaseManager: DatabaseManager = DatabaseManager(this)
+
+    private val mRealtimeDatabaseManager: RealtimeDatabaseManager = RealtimeDatabaseManager()
+
+    private lateinit var mAuth: FirebaseAuth
+
+    private lateinit var mNewsApi: NewsApiRepository
+
+    private lateinit var recyclerView: RecyclerView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_recycler_and_toolbar)
+        mAuth = FirebaseAuth.getInstance()
+        mNewsApi = NewsApiRepository(getString(R.string.news_api_key))
 
-        clearFollowedCategories()
         updateSources()
+
+        setContentView(R.layout.activity_recycler_and_toolbar)
 
         val toolbar: Toolbar = findViewById(R.id.toolbar)
         toolbar.title = getString(R.string.follow_categories)
         setSupportActionBar(toolbar)
 
-        val recyclerView: RecyclerView = findViewById(R.id.recycler_view)
+        recyclerView = findViewById(R.id.recycler_view)
         recyclerView.layoutManager = LinearLayoutManager(this)
-        recyclerView.adapter = FollowCategoriesAdapter(Category.values(), this)
+    }
+
+    override fun onStart() {
+        super.onStart()
+        buildFollowCategoriesAdapter()
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -48,17 +61,19 @@ class FirstTimeSetupActivity : AppCompatActivity() {
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         if (item.itemId == R.id.toolbar_next) {
+            updateUser()
             startActivity(Intent(applicationContext, MainActivity::class.java))
             return true
         }
         return super.onOptionsItemSelected(item)
     }
 
-    private fun clearFollowedCategories() {
-        getSharedPreferences(FollowCategoriesAdapter.CATEGORIES_FOLLOWING, Context.MODE_PRIVATE)
-            .edit()
-            .clear()
-            .apply()
+    private fun buildFollowCategoriesAdapter() {
+        val userUid: String = mAuth.currentUser!!.uid
+        val valueEventListener = CategoriesFollowingValueEventListener { categoryFollowStateArray ->
+            recyclerView.adapter = FollowCategoriesAdapter(categoryFollowStateArray, this)
+        }
+        mRealtimeDatabaseManager.getUserFollowingCategories(userUid, valueEventListener)
     }
 
     @SuppressLint("CheckResult")
@@ -75,6 +90,16 @@ class FirstTimeSetupActivity : AppCompatActivity() {
             }, { err ->
                 Log.e(localClassName, "An error occurred when updating source info:", err)
             })
+    }
+
+    private fun updateUser() {
+        val userUid: String = mAuth.currentUser!!.uid
+        val adapter: FollowCategoriesAdapter = recyclerView.adapter as FollowCategoriesAdapter
+        val categoriesFollowing: List<String> = adapter.categoryState
+            .filter { it!!.second }
+            .map { it!!.first.toString() }
+
+        mRealtimeDatabaseManager.setUserFollowingCategories(userUid, categoriesFollowing)
     }
 
 }

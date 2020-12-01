@@ -15,7 +15,7 @@ import java.time.Duration
 import java.time.LocalDateTime
 import java.util.concurrent.TimeUnit
 
-class ArticleListAdapter(private val articles: MutableList<Article>, private val context: Context) :
+class ArticleListAdapter(private val articles: List<Article>, private val context: Context) :
     RecyclerView.Adapter<ArticleListAdapter.ViewHolder>() {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {

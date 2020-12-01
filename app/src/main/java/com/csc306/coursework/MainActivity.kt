@@ -1,6 +1,6 @@
 package com.csc306.coursework
 
-import android.content.Context
+import android.annotation.SuppressLint
 import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
@@ -10,38 +10,46 @@ import androidx.appcompat.widget.Toolbar
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.csc306.coursework.adapter.ArticleListAdapter
-import com.csc306.coursework.adapter.FollowCategoriesAdapter
 import com.csc306.coursework.database.DatabaseManager
+import com.csc306.coursework.database.RealtimeDatabaseManager
 import com.csc306.coursework.model.Article
-import com.csc306.coursework.model.Category
 import com.dfl.newsapi.NewsApiRepository
 import com.dfl.newsapi.model.ArticleDto
 import com.google.android.material.snackbar.Snackbar
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.database.*
 import io.reactivex.schedulers.Schedulers
 import java.time.OffsetDateTime
 
 class MainActivity : AppCompatActivity() {
 
-    private val mNewsApi: NewsApiRepository = NewsApiRepository("bf38b882f6a6421096d8acd384d33b71")
-
     private val mDatabaseManager: DatabaseManager = DatabaseManager(this)
+
+    private val mRealtimeDatabaseManager: RealtimeDatabaseManager = RealtimeDatabaseManager()
+
+    private lateinit var mNewsApi: NewsApiRepository
 
     private lateinit var mAuth: FirebaseAuth
 
+    private lateinit var mRecyclerView: RecyclerView
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        mNewsApi = NewsApiRepository(getString(R.string.news_api_key))
         mAuth = FirebaseAuth.getInstance()
         setContentView(R.layout.activity_recycler_and_toolbar)
 
         val toolbar: Toolbar = findViewById(R.id.toolbar)
         toolbar.title = getString(R.string.following)
         setSupportActionBar(toolbar)
-//        supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
-        val recyclerView: RecyclerView = findViewById(R.id.recycler_view)
-        recyclerView.layoutManager = LinearLayoutManager(this)
-        recyclerView.adapter = ArticleListAdapter(getArticles(), this)
+        mRecyclerView = findViewById(R.id.recycler_view)
+        mRecyclerView.layoutManager = LinearLayoutManager(this)
+    }
+
+    override fun onStart() {
+        super.onStart()
+        buildRecyclerViewAdapter()
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -52,9 +60,8 @@ class MainActivity : AppCompatActivity() {
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
             R.id.toolbar_refresh -> {
-                val recyclerView: RecyclerView = findViewById(R.id.recycler_view)
-                Snackbar.make(recyclerView, getString(R.string.refreshing), Snackbar.LENGTH_SHORT).show()
-                recyclerView.adapter = ArticleListAdapter(getArticles(), this)
+                Snackbar.make(mRecyclerView, getString(R.string.refreshing), Snackbar.LENGTH_SHORT).show()
+                buildRecyclerViewAdapter()
                 return true
             }
             R.id.toolbar_settings -> {
@@ -70,15 +77,36 @@ class MainActivity : AppCompatActivity() {
         return super.onOptionsItemSelected(item)
     }
 
-    private fun getArticles(): MutableList<Article> {
-        val sourceIds: String = mDatabaseManager.getSourceIdsForCategories(getCategoriesFollowing())
-        return mNewsApi.getTopHeadlines(sources = sourceIds)
+    private fun buildRecyclerViewAdapter() {
+        val valueEventListener: ValueEventListener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val stringListType: GenericTypeIndicator<List<String>> = object : GenericTypeIndicator<List<String>>() {}
+                val categoriesFollowing: List<String>? = snapshot.getValue(stringListType)
+                if (categoriesFollowing != null) {
+                    getArticles(categoriesFollowing.toTypedArray())
+                }
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                throw error.toException()
+            }
+        }
+
+        val userUid: String = mAuth.currentUser!!.uid
+        mRealtimeDatabaseManager.getUserFollowingCategories(userUid, valueEventListener)
+    }
+
+    @SuppressLint("CheckResult")
+    private fun getArticles(categoriesFollowing: Array<String>) {
+        val sourceIds: String = mDatabaseManager.getSourceIdsForCategories(categoriesFollowing)
+        val articles: List<Article> = mNewsApi.getTopHeadlines(sources = sourceIds)
             .subscribeOn(Schedulers.io())
             .toFlowable()
             .flatMapIterable { it.articles }
             .map { buildArticle(it) }
             .toList()
             .blockingGet()
+        mRecyclerView.adapter = ArticleListAdapter(articles, this)
     }
 
     private fun buildArticle(articleDto: ArticleDto): Article {
@@ -90,19 +118,6 @@ class MainActivity : AppCompatActivity() {
             articleDto.description,
             articleDto.url
         )
-    }
-
-    private fun getCategoriesFollowing(): Array<String> {
-        val categoriesFollowing: MutableList<String> = mutableListOf()
-        Category.values().forEach {
-            val categoryName = it.toString()
-            val isFollowing = getSharedPreferences(FollowCategoriesAdapter.CATEGORIES_FOLLOWING, Context.MODE_PRIVATE)
-                .getBoolean(categoryName, false)
-            if (isFollowing) {
-                categoriesFollowing.add(categoryName)
-            }
-        }
-        return categoriesFollowing.toTypedArray()
     }
 
 }
