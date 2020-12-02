@@ -49,4 +49,6 @@ dependencies {
     implementation 'io.reactivex.rxjava2:rxjava:2.2.20'
     implementation 'com.google.firebase:firebase-analytics-ktx'
     implementation 'com.google.cloud:google-cloud-language:1.101.5'
+    implementation 'com.squareup.okhttp3:okhttp:4.9.0'
+    implementation 'com.google.code.gson:gson:2.8.6'
 }

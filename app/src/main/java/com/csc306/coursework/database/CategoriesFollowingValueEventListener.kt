@@ -8,8 +8,9 @@ import com.google.firebase.database.ValueEventListener
 
 class CategoriesFollowingValueEventListener(private val cb: (categoryFollowStateArray: Array<Pair<Category, Boolean>?>) -> Unit) : ValueEventListener {
 
+    private val stringListType: GenericTypeIndicator<List<String>> = object : GenericTypeIndicator<List<String>>() {}
+
     override fun onDataChange(snapshot: DataSnapshot) {
-        val stringListType: GenericTypeIndicator<List<String>> = object : GenericTypeIndicator<List<String>>() {}
         val categoriesFollowing: List<String>? = snapshot.getValue(stringListType)
         val categories: Array<Category> = Category.values()
         val categoryFollowStateArray: Array<Pair<Category, Boolean>?> = arrayOfNulls(categories.size)

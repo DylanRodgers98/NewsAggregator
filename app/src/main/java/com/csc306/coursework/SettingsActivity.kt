@@ -12,14 +12,15 @@ import com.google.firebase.auth.FirebaseAuth
 
 class SettingsActivity : AppCompatActivity() {
 
-    private val mRealtimeDatabaseManager: RealtimeDatabaseManager = RealtimeDatabaseManager()
-
-    private lateinit var recyclerView: RecyclerView
+    private lateinit var mRealtimeDatabaseManager: RealtimeDatabaseManager
 
     private lateinit var mAuth: FirebaseAuth
 
+    private lateinit var recyclerView: RecyclerView
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        mRealtimeDatabaseManager = RealtimeDatabaseManager()
         mAuth = FirebaseAuth.getInstance()
 
         setContentView(R.layout.activity_recycler_and_toolbar)

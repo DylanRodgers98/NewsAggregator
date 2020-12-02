@@ -22,9 +22,9 @@ import java.util.*
 
 class FirstTimeSetupActivity : AppCompatActivity() {
 
-    private val mDatabaseManager: DatabaseManager = DatabaseManager(this)
+    private lateinit var mDatabaseManager: DatabaseManager
 
-    private val mRealtimeDatabaseManager: RealtimeDatabaseManager = RealtimeDatabaseManager()
+    private lateinit var mRealtimeDatabaseManager: RealtimeDatabaseManager
 
     private lateinit var mAuth: FirebaseAuth
 
@@ -34,6 +34,8 @@ class FirstTimeSetupActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        mDatabaseManager = DatabaseManager(this)
+        mRealtimeDatabaseManager = RealtimeDatabaseManager()
         mAuth = FirebaseAuth.getInstance()
         mNewsApi = NewsApiRepository(getString(R.string.news_api_key))
 

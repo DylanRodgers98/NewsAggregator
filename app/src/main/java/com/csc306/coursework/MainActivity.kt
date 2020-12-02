@@ -7,6 +7,7 @@ import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
 import androidx.appcompat.widget.Toolbar
+import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.csc306.coursework.adapter.ArticleListAdapter
@@ -23,9 +24,9 @@ import java.time.OffsetDateTime
 
 class MainActivity : AppCompatActivity() {
 
-    private val mDatabaseManager: DatabaseManager = DatabaseManager(this)
+    private lateinit var mDatabaseManager: DatabaseManager
 
-    private val mRealtimeDatabaseManager: RealtimeDatabaseManager = RealtimeDatabaseManager()
+    private lateinit var mRealtimeDatabaseManager: RealtimeDatabaseManager
 
     private lateinit var mNewsApi: NewsApiRepository
 
@@ -35,6 +36,8 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        mDatabaseManager = DatabaseManager(this)
+        mRealtimeDatabaseManager = RealtimeDatabaseManager()
         mNewsApi = NewsApiRepository(getString(R.string.news_api_key))
         mAuth = FirebaseAuth.getInstance()
         setContentView(R.layout.activity_recycler_and_toolbar)
@@ -99,14 +102,15 @@ class MainActivity : AppCompatActivity() {
     @SuppressLint("CheckResult")
     private fun getArticles(categoriesFollowing: Array<String>) {
         val sourceIds: String = mDatabaseManager.getSourceIdsForCategories(categoriesFollowing)
-        val articles: List<Article> = mNewsApi.getTopHeadlines(sources = sourceIds)
+        val articles: MutableList<Article> = mNewsApi.getTopHeadlines(sources = sourceIds)
             .subscribeOn(Schedulers.io())
             .toFlowable()
             .flatMapIterable { it.articles }
             .map { buildArticle(it) }
             .toList()
             .blockingGet()
-        mRecyclerView.adapter = ArticleListAdapter(articles, this)
+
+        attachAdapterToRecyclerView(articles)
     }
 
     private fun buildArticle(articleDto: ArticleDto): Article {
@@ -118,6 +122,14 @@ class MainActivity : AppCompatActivity() {
             articleDto.description,
             articleDto.url
         )
+    }
+
+    private fun attachAdapterToRecyclerView(articles: MutableList<Article>) {
+        val adapter = ArticleListAdapter(articles, mAuth, mRealtimeDatabaseManager, this)
+        mRecyclerView.adapter = adapter
+
+        val itemTouchHelper = ItemTouchHelper(ArticleListAdapter.SwipeCallback(adapter))
+        itemTouchHelper.attachToRecyclerView(mRecyclerView)
     }
 
 }
