@@ -33,39 +33,39 @@ class RealtimeDatabaseManager {
     }
 
     fun dislikeArticle(userUid: String, article: Article, context: Context) {
-        likeOrDislikeArticle(userUid, article, context,false)
+        likeOrDislikeArticle(userUid, article, context, false)
     }
 
     private fun likeOrDislikeArticle(userUid: String, article: Article, context: Context, isLike: Boolean) {
         val articleUrl = firebaseDatabasePathEncode(article.articleURL)
-        val articleRef: DatabaseReference = mDatabase.getReference(ARTICLES_PATH).child(articleUrl)
-
-        articleRef.addListenerForSingleValueEvent(object : ValueEventListener {
-            override fun onDataChange(snapshot: DataSnapshot) {
-                if (snapshot.exists()) {
-                    val data = snapshot.value as Map<String, Any>
-                    val titleKeywords = data[TITLE_KEYWORDS_PATH] as Map<String, Double>
-                    updateSwipedKeywords(userUid, titleKeywords, isLike)
-                } else {
-                    if (article.titleKeywords == null) {
-                        ArticleTitleAnalyser(context).execute(article).get()
-                    }
-                    articleRef.setValue(article)
-                    updateSwipedKeywords(userUid, article.titleKeywords!!, isLike)
-                }
-            }
-
-            override fun onCancelled(error: DatabaseError) {
-                throw error.toException()
-            }
-        })
 
         val likeOrDislikePath = if (isLike) LIKES_PATH else DISLIKES_PATH
-        mDatabase.getReference(USERS_PATH)
+        val likeOrDislikeRef: DatabaseReference = mDatabase.getReference(USERS_PATH)
             .child(userUid)
             .child(likeOrDislikePath)
-            .push()
-            .setValue(articleUrl)
+
+        likeOrDislikeRef.orderByValue().equalTo(articleUrl)
+            .addListenerForSingleValueEvent(ThrowingValueEventListener { likeOrDislikeSnapshot ->
+                if (!likeOrDislikeSnapshot.exists()) {
+                    likeOrDislikeRef.push().setValue(articleUrl)
+
+                    val articleRef: DatabaseReference = mDatabase.getReference(ARTICLES_PATH).child(articleUrl)
+                    articleRef.addListenerForSingleValueEvent(ThrowingValueEventListener { articleSnapshot ->
+                        if (articleSnapshot.exists()) {
+                            val mapStringAnyType = object : GenericTypeIndicator<Map<String, Any>>() {}
+                            val data: Map<String, Any>? = articleSnapshot.getValue(mapStringAnyType)
+                            val titleKeywords = data?.get(TITLE_KEYWORDS_PATH) as Map<String, Double>
+                            updateSwipedKeywords(userUid, titleKeywords, isLike)
+                        } else {
+                            if (article.titleKeywords == null) {
+                                ArticleTitleAnalyser(context).execute(article).get()
+                            }
+                            articleRef.setValue(article)
+                            updateSwipedKeywords(userUid, article.titleKeywords!!, isLike)
+                        }
+                    })
+                }
+            })
     }
 
     private fun firebaseDatabasePathEncode(str: String): String {
@@ -102,13 +102,13 @@ class RealtimeDatabaseManager {
 
                     if (snapshot.exists()) {
                         val data = snapshot.value as Map<String, Any>
-                        totalSalience += data[TOTAL_SALIENCE_KEY] as Double
-                        count += data[COUNT_KEY] as Long
+                        totalSalience += data[TOTAL_SALIENCE_PATH] as Double
+                        count += data[COUNT_PATH] as Long
                     }
 
                     keywordRef.setValue(mapOf(
-                        TOTAL_SALIENCE_KEY to totalSalience,
-                        COUNT_KEY to count
+                        TOTAL_SALIENCE_PATH to totalSalience,
+                        COUNT_PATH to count
                     ))
                 }
 
@@ -127,8 +127,8 @@ class RealtimeDatabaseManager {
         private const val DISLIKES_PATH = "dislikes"
         private const val ARTICLES_PATH = "articles"
         private const val SWIPED_KEYWORDS_PATH = "swipedKeywords"
-        private const val TOTAL_SALIENCE_KEY = "totalSalience"
-        private const val COUNT_KEY = "count"
+        private const val TOTAL_SALIENCE_PATH = "totalSalience"
+        private const val COUNT_PATH = "count"
         private const val TITLE_KEYWORDS_PATH = "titleKeywords"
     }
 

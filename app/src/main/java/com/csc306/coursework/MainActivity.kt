@@ -13,6 +13,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.csc306.coursework.adapter.ArticleListAdapter
 import com.csc306.coursework.database.DatabaseManager
 import com.csc306.coursework.database.RealtimeDatabaseManager
+import com.csc306.coursework.database.ThrowingValueEventListener
 import com.csc306.coursework.model.Article
 import com.dfl.newsapi.NewsApiRepository
 import com.dfl.newsapi.model.ArticleDto
@@ -81,17 +82,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun buildRecyclerViewAdapter() {
-        val valueEventListener: ValueEventListener = object : ValueEventListener {
-            override fun onDataChange(snapshot: DataSnapshot) {
-                val stringListType: GenericTypeIndicator<List<String>> = object : GenericTypeIndicator<List<String>>() {}
-                val categoriesFollowing: List<String>? = snapshot.getValue(stringListType)
-                if (categoriesFollowing != null) {
-                    getArticles(categoriesFollowing.toTypedArray())
-                }
-            }
-
-            override fun onCancelled(error: DatabaseError) {
-                throw error.toException()
+        val valueEventListener: ValueEventListener = ThrowingValueEventListener {
+            val stringListType = object : GenericTypeIndicator<List<String>>() {}
+            val categoriesFollowing: List<String>? = it.getValue(stringListType)
+            if (categoriesFollowing != null) {
+                getArticles(categoriesFollowing.toTypedArray())
             }
         }
 

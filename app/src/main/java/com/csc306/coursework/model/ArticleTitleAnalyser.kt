@@ -20,8 +20,8 @@ class ArticleTitleAnalyser(val context: Context) : AsyncTask<Article, Void, Unit
             .post("{\"document\": {\"type\": \"PLAIN_TEXT\",\"content\": \"${article.title}\"}}".toRequestBody("application/json".toMediaTypeOrNull()))
             .build()
         val responseBody: ResponseBody? = OkHttpClient().newCall(request).execute().body
-        val response: AnalyzeEntitiesResponse = Gson().fromJson(responseBody?.string(), AnalyzeEntitiesResponse::class.java)
-        article.titleKeywords = response.entities.filter { it.salience > 0 }.associateBy({ it.name }, { it.salience })
+        val DTO: EntitiesDTO = Gson().fromJson(responseBody?.string(), EntitiesDTO::class.java)
+        article.titleKeywords = DTO.entities.filter { it.salience > 0 }.associateBy({ it.name }, { it.salience })
     }
 
 }
