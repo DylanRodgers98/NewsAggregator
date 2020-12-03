@@ -21,8 +21,12 @@ import java.time.Duration
 import java.time.LocalDateTime
 import java.util.concurrent.TimeUnit
 
-class ArticleListAdapter(private val articles: MutableList<Article>, private val mAuth: FirebaseAuth, private val mDatabase: RealtimeDatabaseManager, private val context: Context) :
-    RecyclerView.Adapter<ArticleListAdapter.ViewHolder>() {
+class ArticleListAdapter(
+    private val articles: MutableList<Article>,
+    private val mAuth: FirebaseAuth,
+    private val mDatabase: RealtimeDatabaseManager,
+    private val context: Context
+) : RecyclerView.Adapter<ArticleListAdapter.ViewHolder>() {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val inflater = LayoutInflater.from(parent.context)
@@ -63,11 +67,8 @@ class ArticleListAdapter(private val articles: MutableList<Article>, private val
     private fun likeArticle(position: Int, view: View) {
         if (position < articles.size) {
             val article: Article = articles[position]
-            if (article.titleKeywords == null) {
-                ArticleTitleAnalyser(context).execute(article).get()
-            }
             val userUid: String = mAuth.currentUser!!.uid
-            mDatabase.likeArticle(userUid, article)
+            mDatabase.likeArticle(userUid, article, context)
             Snackbar.make(view, "You liked ${article.title}. We will try to show you more like it!", Snackbar.LENGTH_LONG).show()
         }
     }
@@ -75,11 +76,8 @@ class ArticleListAdapter(private val articles: MutableList<Article>, private val
     private fun dislikeArticle(position: Int, view: View) {
         if (position < articles.size) {
             val article: Article = articles[position]
-            if (article.titleKeywords == null) {
-                ArticleTitleAnalyser(context).execute(article).get()
-            }
             val userUid: String = mAuth.currentUser!!.uid
-            mDatabase.dislikeArticle(userUid, article)
+            mDatabase.dislikeArticle(userUid, article, context)
             articles.removeAt(position)
             Snackbar.make(view, "You disliked ${article.title}. We will try to show you less like it.", Snackbar.LENGTH_LONG).show()
         }

@@ -1,7 +1,12 @@
 package com.csc306.coursework.database
 
+import android.content.Context
 import com.csc306.coursework.model.Article
+import com.csc306.coursework.model.ArticleTitleAnalyser
 import com.google.firebase.database.*
+import java.net.URLDecoder
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 
 class RealtimeDatabaseManager {
 
@@ -23,73 +28,94 @@ class RealtimeDatabaseManager {
             .addListenerForSingleValueEvent(valueEventListener)
     }
 
-    fun likeArticle(userUid: String, article: Article) {
-        likeOrDislikeArticle(userUid, article, LIKES_PATH)
+    fun likeArticle(userUid: String, article: Article, context: Context) {
+        likeOrDislikeArticle(userUid, article, context, true)
     }
 
-    fun dislikeArticle(userUid: String, article: Article) {
-        likeOrDislikeArticle(userUid, article, DISLIKES_PATH)
+    fun dislikeArticle(userUid: String, article: Article, context: Context) {
+        likeOrDislikeArticle(userUid, article, context,false)
     }
 
-    private fun likeOrDislikeArticle(userUid: String, article: Article, likeOrDislikePath: String) {
-        val databaseReference = mDatabase.getReference(USERS_PATH)
-            .child(userUid)
-            .child(likeOrDislikePath)
+    private fun likeOrDislikeArticle(userUid: String, article: Article, context: Context, isLike: Boolean) {
+        val articleUrl = firebaseDatabasePathEncode(article.articleURL)
+        val articleRef: DatabaseReference = mDatabase.getReference(ARTICLES_PATH).child(articleUrl)
 
-        getArticleKeyOrSave(article) { key ->
-            databaseReference
-                .orderByValue()
-                .equalTo(key)
-                .limitToFirst(1)
-                .addListenerForSingleValueEvent(DoIfNotExists {
-                    databaseReference.push().setValue(key)
-                })
-        }
-    }
-
-    private fun getArticleKeyOrSave(article: Article, cb: (key: String) -> Unit) {
-        val keyRetriever: ValueEventListener = object : ValueEventListener {
+        articleRef.addListenerForSingleValueEvent(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
-                val key: String = if (snapshot.exists()) {
-                    if (snapshot.childrenCount != 1L) {
-                        throw IllegalStateException("Couldn't get key for article from Realtime Database")
-                    }
-                    snapshot.children.first().key ?: throw IllegalStateException("Couldn't get key for article from Realtime Database")
+                if (snapshot.exists()) {
+                    val data = snapshot.value as Map<String, Any>
+                    val titleKeywords = data[TITLE_KEYWORDS_PATH] as Map<String, Double>
+                    updateSwipedKeywords(userUid, titleKeywords, isLike)
                 } else {
-                    saveArticle(article)
+                    if (article.titleKeywords == null) {
+                        ArticleTitleAnalyser(context).execute(article).get()
+                    }
+                    articleRef.setValue(article)
+                    updateSwipedKeywords(userUid, article.titleKeywords!!, isLike)
                 }
-                cb(key)
             }
 
             override fun onCancelled(error: DatabaseError) {
                 throw error.toException()
             }
-        }
+        })
 
-        mDatabase.getReference(ARTICLES_PATH)
-            .orderByChild(ARTICLE_URL_KEY)
-            .equalTo(article.articleURL)
-            .limitToFirst(1)
-            .addListenerForSingleValueEvent(keyRetriever)
+        val likeOrDislikePath = if (isLike) LIKES_PATH else DISLIKES_PATH
+        mDatabase.getReference(USERS_PATH)
+            .child(userUid)
+            .child(likeOrDislikePath)
+            .push()
+            .setValue(articleUrl)
     }
 
-    private fun saveArticle(article: Article): String {
-        val databaseReference: DatabaseReference = mDatabase.getReference(ARTICLES_PATH)
-        val key: String = databaseReference.push().key
-            ?: throw IllegalStateException("Couldn't push key for article to Realtime Database")
-        databaseReference.child(key).setValue(article)
-        return key
+    private fun firebaseDatabasePathEncode(str: String): String {
+        val urlEncoded = URLEncoder.encode(str, StandardCharsets.UTF_8.toString())
+        return urlEncoded.replace(".", "%2E")
+            .replace("#", "%23")
+            .replace("$", "%24")
+            .replace("[", "%5B")
+            .replace("]", "%5D")
     }
 
-    inner class DoIfNotExists(val cb: () -> Unit) : ValueEventListener {
-        override fun onDataChange(snapshot: DataSnapshot) {
-            if (!snapshot.exists()) {
-                cb()
-            }
-        }
+    private fun firebaseDatabasePathDecode(str: String): String {
+        val percentDecoded = str.replace("%2E", ".")
+            .replace("%23", "#")
+            .replace("%24", "$")
+            .replace("%5B", "[")
+            .replace("%5D", "]")
+        return URLDecoder.decode(percentDecoded, StandardCharsets.UTF_8.toString())
+    }
 
-        override fun onCancelled(error: DatabaseError) {
-            throw error.toException()
+    private fun updateSwipedKeywords(userUid: String, keywords: Map<String, Double>, isPositive: Boolean) {
+        keywords.entries.forEach {
+            val keyword = it.key
+            val salience = it.value
+            val keywordRef: DatabaseReference = mDatabase.getReference(USERS_PATH)
+                .child(userUid)
+                .child(SWIPED_KEYWORDS_PATH)
+                .child(keyword)
+
+            keywordRef.addListenerForSingleValueEvent(object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    var totalSalience = if (isPositive) salience else -salience
+                    var count = 1L
+
+                    if (snapshot.exists()) {
+                        val data = snapshot.value as Map<String, Any>
+                        totalSalience += data[TOTAL_SALIENCE_KEY] as Double
+                        count += data[COUNT_KEY] as Long
+                    }
+
+                    keywordRef.setValue(mapOf(
+                        TOTAL_SALIENCE_KEY to totalSalience,
+                        COUNT_KEY to count
+                    ))
+                }
+
+                override fun onCancelled(error: DatabaseError) {
+                    throw error.toException()
+                }
+            })
         }
     }
 
@@ -100,7 +126,10 @@ class RealtimeDatabaseManager {
         private const val LIKES_PATH = "likes"
         private const val DISLIKES_PATH = "dislikes"
         private const val ARTICLES_PATH = "articles"
-        private const val ARTICLE_URL_KEY = "articleURL"
+        private const val SWIPED_KEYWORDS_PATH = "swipedKeywords"
+        private const val TOTAL_SALIENCE_KEY = "totalSalience"
+        private const val COUNT_KEY = "count"
+        private const val TITLE_KEYWORDS_PATH = "titleKeywords"
     }
 
 }

@@ -6,5 +6,5 @@ class AnalyzeEntitiesResponse(
 
 class Entity(
     val name: String,
-    val salience: Float
+    val salience: Double
 )
