@@ -23,7 +23,6 @@ class ArticleListAdapter(
     private val articles: MutableList<Article>,
     private val auth: FirebaseAuth,
     private val database: DatabaseManager,
-    private val realtimeDatabase: RealtimeDatabaseManager,
     private val context: Context
 ) : RecyclerView.Adapter<ArticleListAdapter.ViewHolder>() {
 
@@ -68,7 +67,7 @@ class ArticleListAdapter(
             val userUid: String = auth.currentUser!!.uid
             val article: Article = articles[position]
             notifyItemChanged(position)
-            realtimeDatabase.likeArticle(userUid, article) {
+            RealtimeDatabaseManager.likeArticle(userUid, article) {
                 database.likeArticle(article, context)
             }
             showSnackbar(view, context.getString(R.string.you_liked), article.title)
@@ -80,7 +79,7 @@ class ArticleListAdapter(
             val userUid: String = auth.currentUser!!.uid
             val article: Article = articles[position]
             removeArticleAt(position)
-            realtimeDatabase.dislikeArticle(userUid, article) {
+            RealtimeDatabaseManager.dislikeArticle(userUid, article) {
                 database.dislikeArticle(article, context)
             }
             showSnackbar(view, context.getString(R.string.you_disliked), article.title)

@@ -28,8 +28,6 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var mDatabaseManager: DatabaseManager
 
-    private lateinit var mRealtimeDatabaseManager: RealtimeDatabaseManager
-
     private lateinit var mNewsApi: NewsApiRepository
 
     private lateinit var mAuth: FirebaseAuth
@@ -41,7 +39,6 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         mDatabaseManager = DatabaseManager(this)
-        mRealtimeDatabaseManager = RealtimeDatabaseManager()
         mNewsApi = NewsApiRepository(getString(R.string.news_api_key))
         mAuth = FirebaseAuth.getInstance()
         mArticleComparator = ArticleLikabilityComparator(mDatabaseManager, this)
@@ -87,7 +84,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun buildRecyclerViewAdapter() {
         val userUid: String = mAuth.currentUser!!.uid
-        mRealtimeDatabaseManager.getUserFollowingCategories(userUid, ThrowingValueEventListener {
+        RealtimeDatabaseManager.getUserFollowingCategories(userUid, ThrowingValueEventListener {
             val stringListType = object : GenericTypeIndicator<List<String>>() {}
             val categoriesFollowing: List<String>? = it.getValue(stringListType)
             getArticles(categoriesFollowing?.toTypedArray() ?: emptyArray())
@@ -104,6 +101,7 @@ class MainActivity : AppCompatActivity() {
             .map { buildArticle(it) }
             .toList()
             .blockingGet()
+
         removeDislikedArticles(articles)
     }
 
@@ -120,13 +118,13 @@ class MainActivity : AppCompatActivity() {
 
     private fun removeDislikedArticles(articles: MutableList<Article>) {
         val userUid: String = mAuth.currentUser!!.uid
-        mRealtimeDatabaseManager.removeDislikedArticles(userUid, articles) {
+        RealtimeDatabaseManager.removeDislikedArticles(userUid, articles) {
             getTitleKeywords(it)
         }
     }
 
     private fun getTitleKeywords(articles: MutableList<Article>) {
-        mRealtimeDatabaseManager.getArticleTitleKeywords(articles, this) {
+        RealtimeDatabaseManager.getArticleTitleKeywords(articles, this) {
             attachAdapterToRecyclerView(it)
         }
     }
@@ -134,7 +132,7 @@ class MainActivity : AppCompatActivity() {
     private fun attachAdapterToRecyclerView(articles: MutableList<Article>) {
         articles.sortWith(mArticleComparator)
 
-        val adapter = ArticleListAdapter(articles, mAuth, mDatabaseManager, mRealtimeDatabaseManager, this)
+        val adapter = ArticleListAdapter(articles, mAuth, mDatabaseManager, this)
         mRecyclerView.adapter = adapter
 
         val itemTouchHelper = ItemTouchHelper(ArticleListAdapter.SwipeCallback(adapter))

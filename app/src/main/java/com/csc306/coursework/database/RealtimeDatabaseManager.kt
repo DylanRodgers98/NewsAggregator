@@ -7,7 +7,18 @@ import com.google.firebase.database.*
 import java.net.URLDecoder
 import java.net.URLEncoder
 
-class RealtimeDatabaseManager {
+object RealtimeDatabaseManager {
+
+    private const val USERS_PATH = "users"
+    private const val FOLLOWING_PATH = "following"
+    private const val CATEGORIES_PATH = "categories"
+    private const val LIKES_PATH = "likes"
+    private const val LIKED_AT_PATH = "likedAt"
+    private const val DISLIKES_PATH = "dislikes"
+    private const val DISLIKED_AT_PATH = "dislikedAt"
+    private const val ARTICLE_URL_PATH = "articleURL"
+    private const val ARTICLES_PATH = "articles"
+    private const val TITLE_KEYWORDS_PATH = "titleKeywords"
 
     private var mDatabase: FirebaseDatabase = FirebaseDatabase.getInstance()
 
@@ -172,19 +183,6 @@ class RealtimeDatabaseManager {
             .replace("%5B", "[")
             .replace("%5D", "]")
         return URLDecoder.decode(percentDecoded, Charsets.UTF_8.toString())
-    }
-
-    companion object {
-        private const val USERS_PATH = "users"
-        private const val FOLLOWING_PATH = "following"
-        private const val CATEGORIES_PATH = "categories"
-        private const val LIKES_PATH = "likes"
-        private const val LIKED_AT_PATH = "likedAt"
-        private const val DISLIKES_PATH = "dislikes"
-        private const val DISLIKED_AT_PATH = "dislikedAt"
-        const val ARTICLE_URL_PATH = "articleURL"
-        private const val ARTICLES_PATH = "articles"
-        private const val TITLE_KEYWORDS_PATH = "titleKeywords"
     }
 
 }
