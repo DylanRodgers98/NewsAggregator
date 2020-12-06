@@ -4,6 +4,7 @@ import android.content.Context
 import com.csc306.coursework.async.ArticleTitleAnalyser
 import com.csc306.coursework.model.Article
 import com.google.firebase.database.*
+import java.net.URLDecoder
 import java.net.URLEncoder
 
 class RealtimeDatabaseManager {
@@ -27,7 +28,7 @@ class RealtimeDatabaseManager {
     }
 
     fun likeArticle(userUid: String, article: Article, callback: () -> Unit) {
-        val articleURL: String = firebaseEncodeUrl(article.articleURL)
+        val articleURL: String = firebaseEncode(article.articleURL)
 
         val articleRef: DatabaseReference = mDatabase.getReference(ARTICLES_PATH).child(articleURL)
         articleRef.addListenerForSingleValueEvent(ThrowingValueEventListener {
@@ -60,7 +61,7 @@ class RealtimeDatabaseManager {
     }
 
     fun dislikeArticle(userUid: String, article: Article, callback: () -> Unit) {
-        val articleURL: String = firebaseEncodeUrl(article.articleURL)
+        val articleURL: String = firebaseEncode(article.articleURL)
 
         val articleRef: DatabaseReference = mDatabase.getReference(ARTICLES_PATH).child(articleURL)
         articleRef.addListenerForSingleValueEvent(ThrowingValueEventListener {
@@ -104,7 +105,7 @@ class RealtimeDatabaseManager {
         if (iterator.hasNext()) {
             val newArticles: MutableList<Article> = articles.toMutableList()
             val article: IndexedValue<Article> = iterator.next()
-            val articleURL: String = firebaseEncodeUrl(article.value.articleURL)
+            val articleURL: String = firebaseEncode(article.value.articleURL)
             query.equalTo(articleURL)
                 .addListenerForSingleValueEvent(ThrowingValueEventListener {
                     if (it.exists()) {
@@ -125,7 +126,7 @@ class RealtimeDatabaseManager {
         if (iterator.hasNext()) {
             val article: Article = iterator.next()
             if (article.titleKeywords == null) {
-                val articleURL: String = firebaseEncodeUrl(article.articleURL)
+                val articleURL: String = firebaseEncode(article.articleURL)
                 val articleRef: DatabaseReference = mDatabase.getReference(ARTICLES_PATH).child(articleURL)
                 articleRef.addListenerForSingleValueEvent(ThrowingValueEventListener {
                     if (it.exists()) {
@@ -134,7 +135,8 @@ class RealtimeDatabaseManager {
                         val titleKeywords: Map<String, Double> = articleData[TITLE_KEYWORDS_PATH] as Map<String, Double>
                         article.titleKeywords = titleKeywords
                     } else {
-                        article.titleKeywords = ArticleTitleAnalyser(context).execute(article).get()
+                        val titleKeywords: Map<String, Double> = ArticleTitleAnalyser(context).execute(article).get()
+                        article.titleKeywords = titleKeywords.mapKeys { entry -> firebaseEncode(entry.key) }
                         articleRef.setValue(article)
                     }
                     articles.add(article)
@@ -144,17 +146,32 @@ class RealtimeDatabaseManager {
                 iterateArticleTitleKeywords(iterator, articles, context, doneCallback)
             }
         } else {
+            articles.forEach {
+                it.titleKeywords = it.titleKeywords?.mapKeys { entry -> firebaseDecode(entry.key) }
+            }
             doneCallback(articles)
         }
     }
 
-    private fun firebaseEncodeUrl(url: String): String {
-        return URLEncoder.encode(url, Charsets.UTF_8.toString())
-            .replace("$", "%24")
-            .replace("#", "%23")
+    private fun firebaseEncode(str: String): String {
+        return URLEncoder.encode(str, Charsets.UTF_8.toString())
+            .replace("/", "%2F")
             .replace(".", "%2E")
+            .replace("#", "%23")
+            .replace("$", "%24")
             .replace("[", "%5B")
             .replace("]", "%5D")
+    }
+
+    private fun firebaseDecode(str: String): String {
+        val percentDecoded: String = str
+            .replace("%2F", "/")
+            .replace("%2E", ".")
+            .replace("%23", "#")
+            .replace("%24", "$")
+            .replace("%5B", "[")
+            .replace("%5D", "]")
+        return URLDecoder.decode(percentDecoded, Charsets.UTF_8.toString())
     }
 
     companion object {
