@@ -16,9 +16,9 @@
     <string name="minutes_ago">m ago</string>
     <string name="seconds_ago">s ago</string>
     <string name="now">Now</string>
-    <string name="failed_login">Login failed. Please check username and password then try again.</string>
-    <string name="failed_sign_up">Sign up failed. Please check username and password then try again.</string>
-    <string name="empty_auth">Username and password cannot be empty</string>
+    <string name="failed_login">Login failed. Please check email and password then try again.</string>
+    <string name="failed_sign_up">Sign up failed. Please check email and password then try again.</string>
+    <string name="empty_auth">Email and password cannot be empty.</string>
     <string name="email">Email</string>
     <string name="password">Password</string>
     <string name="login">Log In</string>
@@ -29,4 +29,6 @@
     <string name="refresh">Refresh</string>
     <string name="refreshing">Refreshing…</string>
     <string name="settings">Settings</string>
+    <string name="you_liked">You liked</string>
+    <string name="you_disliked">You disliked</string>
 </resources>

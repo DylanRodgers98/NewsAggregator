@@ -7,7 +7,7 @@ import com.google.firebase.database.GenericTypeIndicator
 import com.google.firebase.database.ValueEventListener
 
 class CategoriesFollowingValueEventListener(
-    private val cb: (categoryFollowStateArray: Array<Pair<Category, Boolean>?>) -> Unit
+    private val doneCallback: (categoryFollowStateArray: Array<Pair<Category, Boolean>?>) -> Unit
 ) : ValueEventListener {
 
     private val stringListType: GenericTypeIndicator<List<String>> = object : GenericTypeIndicator<List<String>>() {}
@@ -21,7 +21,7 @@ class CategoriesFollowingValueEventListener(
             val isFollowing: Boolean = categoriesFollowing?.contains(category.toString()) == true
             categoryFollowStateArray[i] = Pair(category, isFollowing)
         }
-        cb(categoryFollowStateArray)
+        doneCallback(categoryFollowStateArray)
     }
 
     override fun onCancelled(error: DatabaseError) {

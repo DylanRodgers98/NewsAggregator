@@ -98,8 +98,8 @@ class FirstTimeSetupActivity : AppCompatActivity() {
         val userUid: String = mAuth.currentUser!!.uid
         val adapter: FollowCategoriesAdapter = recyclerView.adapter as FollowCategoriesAdapter
         val categoriesFollowing: List<String> = adapter.categoryState
-            .filter { it!!.second }
-            .map { it!!.first.toString() }
+            .filter { it!!.second } // filter categories selected to be followed
+            .map { it!!.first.toString() } // map category name
 
         mRealtimeDatabaseManager.setUserFollowingCategories(userUid, categoriesFollowing)
     }

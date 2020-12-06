@@ -8,7 +8,6 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.csc306.coursework.R
-import com.csc306.coursework.database.DatabaseManager
 import com.csc306.coursework.model.Category
 import com.google.android.material.snackbar.Snackbar
 

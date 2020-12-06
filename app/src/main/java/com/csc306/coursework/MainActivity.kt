@@ -15,6 +15,7 @@ import com.csc306.coursework.database.DatabaseManager
 import com.csc306.coursework.database.RealtimeDatabaseManager
 import com.csc306.coursework.database.ThrowingValueEventListener
 import com.csc306.coursework.model.Article
+import com.csc306.coursework.model.ArticleLikabilityComparator
 import com.dfl.newsapi.NewsApiRepository
 import com.dfl.newsapi.model.ArticleDto
 import com.google.android.material.snackbar.Snackbar
@@ -33,6 +34,8 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var mAuth: FirebaseAuth
 
+    private lateinit var mArticleComparator: ArticleLikabilityComparator
+
     private lateinit var mRecyclerView: RecyclerView
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -41,6 +44,7 @@ class MainActivity : AppCompatActivity() {
         mRealtimeDatabaseManager = RealtimeDatabaseManager()
         mNewsApi = NewsApiRepository(getString(R.string.news_api_key))
         mAuth = FirebaseAuth.getInstance()
+        mArticleComparator = ArticleLikabilityComparator(mDatabaseManager, this)
         setContentView(R.layout.activity_recycler_and_toolbar)
 
         val toolbar: Toolbar = findViewById(R.id.toolbar)
@@ -82,16 +86,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun buildRecyclerViewAdapter() {
-        val valueEventListener: ValueEventListener = ThrowingValueEventListener {
+        val userUid: String = mAuth.currentUser!!.uid
+        mRealtimeDatabaseManager.getUserFollowingCategories(userUid, ThrowingValueEventListener {
             val stringListType = object : GenericTypeIndicator<List<String>>() {}
             val categoriesFollowing: List<String>? = it.getValue(stringListType)
-            if (categoriesFollowing != null) {
-                getArticles(categoriesFollowing.toTypedArray())
-            }
-        }
-
-        val userUid: String = mAuth.currentUser!!.uid
-        mRealtimeDatabaseManager.getUserFollowingCategories(userUid, valueEventListener)
+            getArticles(categoriesFollowing?.toTypedArray() ?: emptyArray())
+        })
     }
 
     @SuppressLint("CheckResult")
@@ -104,23 +104,37 @@ class MainActivity : AppCompatActivity() {
             .map { buildArticle(it) }
             .toList()
             .blockingGet()
-
-        attachAdapterToRecyclerView(articles)
+        removeDislikedArticles(articles)
     }
 
     private fun buildArticle(articleDto: ArticleDto): Article {
         return Article(
             articleDto.source.name,
-            OffsetDateTime.parse(articleDto.publishedAt).toLocalDateTime(),
+            OffsetDateTime.parse(articleDto.publishedAt).toInstant().toEpochMilli(),
             articleDto.urlToImage,
             articleDto.title,
             articleDto.description,
-            articleDto.url
+            articleDto.url,
         )
     }
 
+    private fun removeDislikedArticles(articles: MutableList<Article>) {
+        val userUid: String = mAuth.currentUser!!.uid
+        mRealtimeDatabaseManager.removeDislikedArticles(userUid, articles) {
+            getTitleKeywords(articles)
+        }
+    }
+
+    private fun getTitleKeywords(articles: MutableList<Article>) {
+        mRealtimeDatabaseManager.getArticleTitleKeywords(articles, this) {
+            attachAdapterToRecyclerView(articles)
+        }
+    }
+
     private fun attachAdapterToRecyclerView(articles: MutableList<Article>) {
-        val adapter = ArticleListAdapter(articles, mAuth, mRealtimeDatabaseManager, this)
+        articles.sortWith(mArticleComparator)
+
+        val adapter = ArticleListAdapter(articles, mAuth, mDatabaseManager, mRealtimeDatabaseManager, this)
         mRecyclerView.adapter = adapter
 
         val itemTouchHelper = ItemTouchHelper(ArticleListAdapter.SwipeCallback(adapter))

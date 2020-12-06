@@ -40,9 +40,7 @@ class AuthenticationActivity : AppCompatActivity() {
         closeKeyboard()
         val email: String = getEmailTextView().text.toString()
         val password: String = getPasswordTextView().text.toString()
-        if (TextUtils.isEmpty(email) || TextUtils.isEmpty(password)) {
-            Snackbar.make(view, getString(R.string.empty_auth), Snackbar.LENGTH_LONG).show()
-        } else {
+        doIfAuthNonEmpty(email, password, view) {
             mAuth.signInWithEmailAndPassword(email, password)
                 .addOnCompleteListener(getOnCompleteListener(view, getString(R.string.failed_login)))
         }
@@ -52,11 +50,17 @@ class AuthenticationActivity : AppCompatActivity() {
         closeKeyboard()
         val email: String = getEmailTextView().text.toString()
         val password: String = getPasswordTextView().text.toString()
+        doIfAuthNonEmpty(email, password, view) {
+            mAuth.createUserWithEmailAndPassword(email, password)
+                .addOnCompleteListener(getOnCompleteListener(view, getString(R.string.failed_sign_up)))
+        }
+    }
+
+    private fun doIfAuthNonEmpty(email: String, password: String, view: View, function: () -> Unit) {
         if (TextUtils.isEmpty(email) || TextUtils.isEmpty(password)) {
             Snackbar.make(view, getString(R.string.empty_auth), Snackbar.LENGTH_LONG).show()
         } else {
-            mAuth.createUserWithEmailAndPassword(email, password)
-                .addOnCompleteListener(getOnCompleteListener(view, getString(R.string.failed_sign_up)))
+            function()
         }
     }
 

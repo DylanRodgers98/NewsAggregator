@@ -5,12 +5,10 @@ import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteException
 import android.database.sqlite.SQLiteOpenHelper
-import android.util.Log
-import androidx.core.database.sqlite.transaction
+import com.csc306.coursework.async.ArticleTitleAnalyser
+import com.csc306.coursework.model.Article
 import com.csc306.coursework.model.LikabilityDTO
 import com.dfl.newsapi.model.SourceDto
-import com.google.api.gax.rpc.NotFoundException
-import java.sql.SQLDataException
 import java.util.*
 
 class DatabaseManager(context: Context) :
@@ -57,33 +55,42 @@ class DatabaseManager(context: Context) :
         throw SQLiteException("Found no sources in database. Has first time setup taken place?")
     }
 
-    fun updateLikabilityForKeywords(titleKeywords: Map<String, Float>, positive: Boolean) {
+    fun likeArticle(article: Article, context: Context) {
+        updateLikabilityForArticle(article, context, true)
+    }
+
+    fun dislikeArticle(article: Article, context: Context) {
+        updateLikabilityForArticle(article, context, false)
+    }
+
+    private fun updateLikabilityForArticle(article: Article, context: Context, positive: Boolean) {
+        if (article.titleKeywords == null) {
+            article.titleKeywords = ArticleTitleAnalyser(context).execute(article).get()
+        }
+        updateLikabilityForKeywords(article.titleKeywords!!, positive)
+    }
+
+    private fun updateLikabilityForKeywords(titleKeywords: Map<String, Double>, positive: Boolean) {
         doWithinTransaction(this.writableDatabase) { db ->
             titleKeywords.entries.forEach {
                 val keyword: String = it.key
+                val salience: Double = it.value
 
-                var currentTotalSalience = 0.0F
-                var currentCount = 0.0F
+                var totalSalience: Double = if (positive) salience else -salience
+                var count = 1.0
 
-                val query = "SELECT $COLUMN_TOTAL_SALIENCE, $COLUMN_COUNT FROM $TABLE_SWIPED_KEYWORD WHERE $COLUMN_KEYWORD='?'"
+                val query = "SELECT $COLUMN_TOTAL_SALIENCE, $COLUMN_COUNT FROM $TABLE_SWIPED_KEYWORD WHERE $COLUMN_KEYWORD=?"
                 db.rawQuery(query, arrayOf(keyword)).use { cursor ->
                     if (cursor.moveToFirst()) {
-                        currentTotalSalience = cursor.getFloat(0)
-                        currentCount = cursor.getFloat(1)
+                        totalSalience += cursor.getFloat(0)
+                        count += cursor.getFloat(1)
                     }
-                }
-
-                val salience: Float = it.value
-                val newTotalSalience = if (positive) {
-                    currentTotalSalience + salience
-                } else {
-                    currentTotalSalience - salience
                 }
 
                 val values = ContentValues()
                 values.put(COLUMN_KEYWORD, keyword)
-                values.put(COLUMN_TOTAL_SALIENCE, newTotalSalience)
-                values.put(COLUMN_COUNT, currentCount + 1)
+                values.put(COLUMN_TOTAL_SALIENCE, totalSalience)
+                values.put(COLUMN_COUNT, count)
                 db.insertWithOnConflict(TABLE_SWIPED_KEYWORD,null, values, SQLiteDatabase.CONFLICT_REPLACE)
             }
         }
@@ -96,7 +103,7 @@ class DatabaseManager(context: Context) :
             if (cursor.moveToFirst()) {
                 do {
                     val keyword: String = cursor.getString(0)
-                    val likability: Float = cursor.getFloat(1)
+                    val likability: Double = cursor.getDouble(1)
                     likabilityDTOs.add(LikabilityDTO(keyword, likability))
                 } while (cursor.moveToNext())
             }
