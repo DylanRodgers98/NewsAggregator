@@ -33,6 +33,11 @@
     <string name="you_liked">You liked</string>
     <string name="you_disliked">You disliked</string>
     <string name="update_profile">Update Profile</string>
+    <string name="profile_pic">Profile Picture</string>
+    <string name="change_profile_pic">Change Profile Picture</string>
+    <string name="choose_profile_pic">Choose Profile Picture</string>
     <string name="display_name">Display Name</string>
     <string name="location">Location</string>
+    <string name="saving_profile">Saving profile...</string>
+    <string name="error_saving_profile">Error saving profile:</string>
 </resources>

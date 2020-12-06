@@ -30,6 +30,37 @@
             <androidx.appcompat.widget.AppCompatTextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:text="@string/profile_pic"
+                android:textAlignment="textEnd" />
+
+            <androidx.appcompat.widget.AppCompatImageView
+                android:id="@+id/profile_pic"
+                android:layout_weight="1"
+                android:layout_width="80dp"
+                android:layout_height="80dp"
+                android:paddingStart="6dp"
+                android:src="@mipmap/ic_launcher" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_change_profile_pic"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="2"
+                android:insetLeft="6dp"
+                android:insetRight="6dp"
+                android:text="@string/change_profile_pic" />
+
+        </TableRow>
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:paddingBottom="3dp">
+
+            <androidx.appcompat.widget.AppCompatTextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
                 android:text="@string/display_name"
                 android:textAlignment="textEnd" />
 
