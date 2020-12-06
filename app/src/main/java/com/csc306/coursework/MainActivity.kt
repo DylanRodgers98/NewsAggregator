@@ -121,13 +121,13 @@ class MainActivity : AppCompatActivity() {
     private fun removeDislikedArticles(articles: MutableList<Article>) {
         val userUid: String = mAuth.currentUser!!.uid
         mRealtimeDatabaseManager.removeDislikedArticles(userUid, articles) {
-            getTitleKeywords(articles)
+            getTitleKeywords(it)
         }
     }
 
     private fun getTitleKeywords(articles: MutableList<Article>) {
         mRealtimeDatabaseManager.getArticleTitleKeywords(articles, this) {
-            attachAdapterToRecyclerView(articles)
+            attachAdapterToRecyclerView(it)
         }
     }
 

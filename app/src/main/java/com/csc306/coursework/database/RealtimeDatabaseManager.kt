@@ -75,8 +75,8 @@ class RealtimeDatabaseManager {
         userDislikesRef.orderByChild(ARTICLE_URL_PATH).equalTo(articleURL)
             .addListenerForSingleValueEvent(ThrowingValueEventListener {
                 if (!it.exists()) {
-                    userDislikesRef.setValue(mapOf(
-                        ARTICLE_URL_PATH to article,
+                    userDislikesRef.push().setValue(mapOf(
+                        ARTICLE_URL_PATH to articleURL,
                         DISLIKED_AT_PATH to System.currentTimeMillis()
                     ))
                     callback()
@@ -92,16 +92,7 @@ class RealtimeDatabaseManager {
             })
     }
 
-    fun getUserDislikedArticles(userUid: String, earliestDislikedAt: Long, valueEventListener: ValueEventListener) {
-        mDatabase.getReference(USERS_PATH)
-            .child(userUid)
-            .child(DISLIKES_PATH)
-            .orderByChild(DISLIKED_AT_PATH)
-            .startAt(earliestDislikedAt.toDouble())
-            .addListenerForSingleValueEvent(valueEventListener)
-    }
-
-    fun removeDislikedArticles(userUid: String, articles: MutableList<Article>, doneCallback: (articles: List<Article>) -> Unit) {
+    fun removeDislikedArticles(userUid: String, articles: MutableList<Article>, doneCallback: (articles: MutableList<Article>) -> Unit) {
         val query: Query = mDatabase.getReference(USERS_PATH)
             .child(userUid)
             .child(DISLIKES_PATH)
@@ -109,27 +100,28 @@ class RealtimeDatabaseManager {
         iterateRemoveDislikedArticles(query, articles.iterator().withIndex(), articles, doneCallback)
     }
 
-    private fun iterateRemoveDislikedArticles(query: Query, iterator: Iterator<IndexedValue<Article>>, articles: MutableList<Article>, doneCallback: (articles: List<Article>) -> Unit) {
+    private fun iterateRemoveDislikedArticles(query: Query, iterator: Iterator<IndexedValue<Article>>, articles: MutableList<Article>, doneCallback: (articles: MutableList<Article>) -> Unit) {
         if (iterator.hasNext()) {
+            val newArticles: MutableList<Article> = articles.toMutableList()
             val article: IndexedValue<Article> = iterator.next()
             val articleURL: String = firebaseEncodeUrl(article.value.articleURL)
             query.equalTo(articleURL)
                 .addListenerForSingleValueEvent(ThrowingValueEventListener {
                     if (it.exists()) {
-                        articles.removeAt(article.index)
+                        newArticles.removeAt(article.index)
                     }
-                    iterateRemoveDislikedArticles(query, iterator, articles, doneCallback)
+                    iterateRemoveDislikedArticles(query, iterator, newArticles, doneCallback)
                 })
         } else {
             doneCallback(articles)
         }
     }
 
-    fun getArticleTitleKeywords(articles: List<Article>, context: Context, doneCallback: (articles: List<Article>) -> Unit) {
+    fun getArticleTitleKeywords(articles: List<Article>, context: Context, doneCallback: (articles: MutableList<Article>) -> Unit) {
         iterateArticleTitleKeywords(articles.iterator(), mutableListOf(), context, doneCallback)
     }
 
-    private fun iterateArticleTitleKeywords(iterator: Iterator<Article>, articles: MutableList<Article>, context: Context, doneCallback: (articles: List<Article>) -> Unit) {
+    private fun iterateArticleTitleKeywords(iterator: Iterator<Article>, articles: MutableList<Article>, context: Context, doneCallback: (articles: MutableList<Article>) -> Unit) {
         if (iterator.hasNext()) {
             val article: Article = iterator.next()
             if (article.titleKeywords == null) {
