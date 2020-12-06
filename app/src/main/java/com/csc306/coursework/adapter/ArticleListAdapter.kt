@@ -68,7 +68,7 @@ class ArticleListAdapter(
             val article: Article = articles[position]
             notifyItemChanged(position)
             RealtimeDatabaseManager.likeArticle(userUid, article) {
-                database.likeArticle(article, context)
+                database.likeArticle(article)
             }
             showSnackbar(view, context.getString(R.string.you_liked), article.title)
         }
@@ -80,7 +80,7 @@ class ArticleListAdapter(
             val article: Article = articles[position]
             removeArticleAt(position)
             RealtimeDatabaseManager.dislikeArticle(userUid, article) {
-                database.dislikeArticle(article, context)
+                database.dislikeArticle(article)
             }
             showSnackbar(view, context.getString(R.string.you_disliked), article.title)
         }

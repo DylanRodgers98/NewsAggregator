@@ -14,7 +14,7 @@ class SettingsActivity : AppCompatActivity() {
 
     private lateinit var mAuth: FirebaseAuth
 
-    private lateinit var recyclerView: RecyclerView
+    private lateinit var mRecyclerView: RecyclerView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -26,8 +26,8 @@ class SettingsActivity : AppCompatActivity() {
         toolbar.title = getString(R.string.settings)
         setSupportActionBar(toolbar)
 
-        recyclerView = findViewById(R.id.recycler_view)
-        recyclerView.layoutManager = LinearLayoutManager(this)
+        mRecyclerView = findViewById(R.id.recycler_view)
+        mRecyclerView.layoutManager = LinearLayoutManager(this)
     }
 
     override fun onStart() {
@@ -43,14 +43,14 @@ class SettingsActivity : AppCompatActivity() {
     private fun buildFollowCategoriesAdapter() {
         val userUid: String = mAuth.currentUser!!.uid
         val valueEventListener = CategoriesFollowingValueEventListener { categoryFollowStateArray ->
-            recyclerView.adapter = FollowCategoriesAdapter(categoryFollowStateArray, this)
+            mRecyclerView.adapter = FollowCategoriesAdapter(categoryFollowStateArray, this)
         }
         RealtimeDatabaseManager.getUserFollowingCategories(userUid, valueEventListener)
     }
 
     private fun updateUser() {
         val userUid: String = mAuth.currentUser!!.uid
-        val adapter: FollowCategoriesAdapter = recyclerView.adapter as FollowCategoriesAdapter
+        val adapter: FollowCategoriesAdapter = mRecyclerView.adapter as FollowCategoriesAdapter
         val categoriesFollowing: List<String> = adapter.categoryState
             .filter { it!!.second } // filter categories selected to be followed
             .map { it!!.first.toString() } // map category name

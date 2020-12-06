@@ -23,6 +23,7 @@
         <activity android:name=".FirstTimeSetupActivity" />
         <activity android:name=".MainActivity" />
         <activity android:name=".SettingsActivity" />
+        <activity android:name=".UpdateUserProfileActivity" />
     </application>
 
 </manifest>

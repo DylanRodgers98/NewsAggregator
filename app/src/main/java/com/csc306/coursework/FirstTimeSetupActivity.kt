@@ -28,7 +28,7 @@ class FirstTimeSetupActivity : AppCompatActivity() {
 
     private lateinit var mNewsApi: NewsApiRepository
 
-    private lateinit var recyclerView: RecyclerView
+    private lateinit var mRecyclerView: RecyclerView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -44,8 +44,8 @@ class FirstTimeSetupActivity : AppCompatActivity() {
         toolbar.title = getString(R.string.follow_categories)
         setSupportActionBar(toolbar)
 
-        recyclerView = findViewById(R.id.recycler_view)
-        recyclerView.layoutManager = LinearLayoutManager(this)
+        mRecyclerView = findViewById(R.id.recycler_view)
+        mRecyclerView.layoutManager = LinearLayoutManager(this)
     }
 
     override fun onStart() {
@@ -54,14 +54,16 @@ class FirstTimeSetupActivity : AppCompatActivity() {
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        menuInflater.inflate(R.menu.toolbar_first_time_setup, menu)
+        menuInflater.inflate(R.menu.toolbar_next, menu)
         return super.onCreateOptionsMenu(menu)
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         if (item.itemId == R.id.toolbar_next) {
-            updateUser()
-            startActivity(Intent(applicationContext, MainActivity::class.java))
+            setUserFollowingCategories()
+            val intent = Intent(applicationContext, UpdateUserProfileActivity::class.java)
+                .putExtra(IS_FIRST_TIME_SETUP, true)
+            startActivity(intent)
             return true
         }
         return super.onOptionsItemSelected(item)
@@ -70,7 +72,7 @@ class FirstTimeSetupActivity : AppCompatActivity() {
     private fun buildFollowCategoriesAdapter() {
         val userUid: String = mAuth.currentUser!!.uid
         val valueEventListener = CategoriesFollowingValueEventListener { categoryFollowStateArray ->
-            recyclerView.adapter = FollowCategoriesAdapter(categoryFollowStateArray, this)
+            mRecyclerView.adapter = FollowCategoriesAdapter(categoryFollowStateArray, this)
         }
         RealtimeDatabaseManager.getUserFollowingCategories(userUid, valueEventListener)
     }
@@ -91,14 +93,18 @@ class FirstTimeSetupActivity : AppCompatActivity() {
             })
     }
 
-    private fun updateUser() {
+    private fun setUserFollowingCategories() {
         val userUid: String = mAuth.currentUser!!.uid
-        val adapter: FollowCategoriesAdapter = recyclerView.adapter as FollowCategoriesAdapter
+        val adapter: FollowCategoriesAdapter = mRecyclerView.adapter as FollowCategoriesAdapter
         val categoriesFollowing: List<String> = adapter.categoryState
             .filter { it!!.second } // filter categories selected to be followed
             .map { it!!.first.toString() } // map category name
 
         RealtimeDatabaseManager.setUserFollowingCategories(userUid, categoriesFollowing)
+    }
+
+    companion object {
+        const val IS_FIRST_TIME_SETUP = "IS_FIRST_TIME_SETUP"
     }
 
 }

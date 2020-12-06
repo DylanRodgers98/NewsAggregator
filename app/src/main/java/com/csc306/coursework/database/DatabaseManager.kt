@@ -11,7 +11,7 @@ import com.csc306.coursework.model.LikabilityDTO
 import com.dfl.newsapi.model.SourceDto
 import java.util.*
 
-class DatabaseManager(context: Context) :
+class DatabaseManager(private val context: Context) :
     SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
 
     override fun onCreate(database: SQLiteDatabase) {
@@ -55,15 +55,15 @@ class DatabaseManager(context: Context) :
         throw SQLiteException("Found no sources in database. Has first time setup taken place?")
     }
 
-    fun likeArticle(article: Article, context: Context) {
-        updateLikabilityForArticle(article, context, true)
+    fun likeArticle(article: Article) {
+        updateLikabilityForArticle(article, true)
     }
 
-    fun dislikeArticle(article: Article, context: Context) {
-        updateLikabilityForArticle(article, context, false)
+    fun dislikeArticle(article: Article) {
+        updateLikabilityForArticle(article, false)
     }
 
-    private fun updateLikabilityForArticle(article: Article, context: Context, positive: Boolean) {
+    private fun updateLikabilityForArticle(article: Article, positive: Boolean) {
         if (article.titleKeywords == null) {
             article.titleKeywords = ArticleTitleAnalyser(context).execute(article).get()
         }

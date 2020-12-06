@@ -10,7 +10,6 @@ import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
-import okhttp3.ResponseBody
 
 class ArticleTitleAnalyser(private val context: Context) : AsyncTask<Article, Void, Map<String, Double>>() {
 
@@ -22,13 +21,14 @@ class ArticleTitleAnalyser(private val context: Context) : AsyncTask<Article, Vo
             .post("{\"document\": {\"type\": \"PLAIN_TEXT\",\"content\": \"${article.title}\"}}"
                 .toRequestBody("application/json".toMediaTypeOrNull()))
             .build()
-        val responseBody: ResponseBody? = OKHTTP.newCall(request).execute().body
-        val dto: EntitiesDTO = GSON.fromJson(responseBody?.string(), EntitiesDTO::class.java)
-        return dto.entities?.filter { it.salience > 0 }?.associateBy({ it.name }, { it.salience })
+        OKHTTP_CLIENT.newCall(request).execute().use { response ->
+            val dto: EntitiesDTO = GSON.fromJson(response.body?.string(), EntitiesDTO::class.java)
+            return dto.entities?.filter { it.salience > 0 }?.associateBy({ it.name }, { it.salience })
+        }
     }
 
     companion object {
-        private val OKHTTP = OkHttpClient()
+        private val OKHTTP_CLIENT = OkHttpClient()
         private val GSON: Gson = Gson()
     }
 

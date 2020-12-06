@@ -3,7 +3,10 @@ package com.csc306.coursework.database
 import android.content.Context
 import com.csc306.coursework.async.ArticleTitleAnalyser
 import com.csc306.coursework.model.Article
+import com.csc306.coursework.model.Category
+import com.csc306.coursework.model.UserProfile
 import com.google.firebase.database.*
+import java.lang.Exception
 import java.net.URLDecoder
 import java.net.URLEncoder
 
@@ -19,6 +22,7 @@ object RealtimeDatabaseManager {
     private const val ARTICLE_URL_PATH = "articleURL"
     private const val ARTICLES_PATH = "articles"
     private const val TITLE_KEYWORDS_PATH = "titleKeywords"
+    private const val USER_PROFILE_PATH = "profile"
 
     private var mDatabase: FirebaseDatabase = FirebaseDatabase.getInstance()
 
@@ -109,10 +113,11 @@ object RealtimeDatabaseManager {
             .child(userUid)
             .child(DISLIKES_PATH)
             .orderByChild(ARTICLE_URL_PATH)
-        iterateRemoveDislikedArticles(query, articles.iterator().withIndex(), articles, doneCallback)
+
+        removeDislikedArticles(query, articles.iterator().withIndex(), articles, doneCallback)
     }
 
-    private fun iterateRemoveDislikedArticles(query: Query, iterator: Iterator<IndexedValue<Article>>, articles: MutableList<Article>, doneCallback: (articles: MutableList<Article>) -> Unit) {
+    private fun removeDislikedArticles(query: Query, iterator: Iterator<IndexedValue<Article>>, articles: MutableList<Article>, doneCallback: (articles: MutableList<Article>) -> Unit) {
         if (iterator.hasNext()) {
             val newArticles: MutableList<Article> = articles.toMutableList()
             val article: IndexedValue<Article> = iterator.next()
@@ -122,7 +127,7 @@ object RealtimeDatabaseManager {
                     if (it.exists()) {
                         newArticles.removeAt(article.index)
                     }
-                    iterateRemoveDislikedArticles(query, iterator, newArticles, doneCallback)
+                    removeDislikedArticles(query, iterator, newArticles, doneCallback)
                 })
         } else {
             doneCallback(articles)
@@ -130,10 +135,10 @@ object RealtimeDatabaseManager {
     }
 
     fun getArticleTitleKeywords(articles: List<Article>, context: Context, doneCallback: (articles: MutableList<Article>) -> Unit) {
-        iterateArticleTitleKeywords(articles.iterator(), mutableListOf(), context, doneCallback)
+        getArticleTitleKeywords(articles.iterator(), mutableListOf(), context, doneCallback)
     }
 
-    private fun iterateArticleTitleKeywords(iterator: Iterator<Article>, articles: MutableList<Article>, context: Context, doneCallback: (articles: MutableList<Article>) -> Unit) {
+    private fun getArticleTitleKeywords(iterator: Iterator<Article>, articles: MutableList<Article>, context: Context, doneCallback: (articles: MutableList<Article>) -> Unit) {
         if (iterator.hasNext()) {
             val article: Article = iterator.next()
             if (article.titleKeywords == null) {
@@ -147,16 +152,18 @@ object RealtimeDatabaseManager {
                         article.titleKeywords = titleKeywords
                     } else {
                         val titleKeywords: Map<String, Double> = ArticleTitleAnalyser(context).execute(article).get()
+                        // encode keys to remove illegal characters for storing in Firebase
                         article.titleKeywords = titleKeywords.mapKeys { entry -> firebaseEncode(entry.key) }
                         articleRef.setValue(article)
                     }
                     articles.add(article)
-                    iterateArticleTitleKeywords(iterator, articles, context, doneCallback)
+                    getArticleTitleKeywords(iterator, articles, context, doneCallback)
                 })
             } else {
-                iterateArticleTitleKeywords(iterator, articles, context, doneCallback)
+                getArticleTitleKeywords(iterator, articles, context, doneCallback)
             }
         } else {
+            // decode keys to reinstate illegal characters for storing in Firebase
             articles.forEach {
                 it.titleKeywords = it.titleKeywords?.mapKeys { entry -> firebaseDecode(entry.key) }
             }
@@ -183,6 +190,28 @@ object RealtimeDatabaseManager {
             .replace("%5B", "[")
             .replace("%5D", "]")
         return URLDecoder.decode(percentDecoded, Charsets.UTF_8.toString())
+    }
+
+    fun updateUserProfile(userUid: String, userProfile: UserProfile, onComplete: () -> Unit) {
+        mDatabase.getReference(USERS_PATH)
+            .child(userUid)
+            .child(USER_PROFILE_PATH)
+            .setValue(userProfile)
+            .addOnCompleteListener {
+                if (it.isSuccessful) {
+                    onComplete()
+                }
+            }
+    }
+
+    fun getUserProfile(userUid: String, doneCallback: (userProfile: UserProfile?) -> Unit) {
+        mDatabase.getReference(USERS_PATH)
+            .child(userUid)
+            .child(USER_PROFILE_PATH)
+            .addListenerForSingleValueEvent(ThrowingValueEventListener {
+                val userProfile: UserProfile? = it.getValue(UserProfile::class.java)
+                doneCallback(userProfile)
+            })
     }
 
 }
