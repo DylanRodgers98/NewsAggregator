@@ -23,6 +23,7 @@ object RealtimeDatabaseManager {
     private const val ARTICLES_PATH = "articles"
     private const val TITLE_KEYWORDS_PATH = "titleKeywords"
     private const val USER_PROFILE_PATH = "profile"
+    private const val ARTICLE_LIMIT = 20
 
     private var mDatabase: FirebaseDatabase = FirebaseDatabase.getInstance()
 
@@ -212,6 +213,43 @@ object RealtimeDatabaseManager {
                 val userProfile: UserProfile? = it.getValue(UserProfile::class.java)
                 doneCallback(userProfile)
             })
+    }
+
+    fun getUserLikes(userUid: String, doneCallback: (articles: MutableList<Article>) -> Unit) {
+        mDatabase.getReference(USERS_PATH)
+            .child(userUid)
+            .child(LIKES_PATH)
+            .orderByChild(LIKED_AT_PATH)
+            .limitToFirst(ARTICLE_LIMIT)
+            .addListenerForSingleValueEvent(ThrowingValueEventListener {
+                val articleURLs: List<String> = it.children.map { snapshot ->
+                    val mapStringAnyType = object : GenericTypeIndicator<Map<String, Any>>() {}
+                    val likeData: Map<String, Any> = snapshot.getValue(mapStringAnyType)!!
+                    likeData[ARTICLE_URL_PATH] as String
+                }
+                getArticles(articleURLs, doneCallback)
+            })
+    }
+
+    private fun getArticles(articleURLs: List<String>, doneCallback: (articles: MutableList<Article>) -> Unit) {
+        getArticles(articleURLs.iterator(), mutableListOf(), doneCallback)
+    }
+
+    private fun getArticles(iterator: Iterator<String>, articles: MutableList<Article>, doneCallback: (articles: MutableList<Article>) -> Unit) {
+        if (iterator.hasNext()) {
+            val articleURL: String = iterator.next()
+            mDatabase.getReference(ARTICLES_PATH)
+                .child(articleURL)
+                .addListenerForSingleValueEvent(ThrowingValueEventListener {
+                    if (it.exists()) {
+                        val article: Article = it.getValue(Article::class.java)!!
+                        articles.add(article)
+                    }
+                    getArticles(iterator, articles, doneCallback)
+                })
+        } else {
+            doneCallback(articles)
+        }
     }
 
 }

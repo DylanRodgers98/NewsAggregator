@@ -36,19 +36,25 @@
             android:orientation="vertical">
 
             <androidx.appcompat.widget.AppCompatTextView
-                android:id="@+id/username"
+                android:id="@+id/display_name"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Username"
                 android:textColor="@color/textDark"
                 android:textSize="20sp"
                 android:textStyle="bold" />
+
+            <androidx.appcompat.widget.AppCompatTextView
+                android:id="@+id/location"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/textDark"
+                android:textSize="16sp"/>
 
             <androidx.appcompat.widget.AppCompatButton
                 android:id="@+id/follow_button"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Follow" />
+                android:text="@string/follow" />
 
         </androidx.appcompat.widget.LinearLayoutCompat>
 
