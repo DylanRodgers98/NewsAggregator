@@ -21,6 +21,15 @@ class Article(
     )
 
     var titleKeywords: Map<String, Double>? = null
+    var isLikedByCurrentUser: Boolean = false
+    private var likedBy: MutableList<String>? = null
+
+    fun likedBy(userUid: String) {
+        if (likedBy == null) {
+            likedBy = mutableListOf()
+        }
+        likedBy!!.add(userUid)
+    }
 
     override fun equals(other: Any?): Boolean {
         return other is Article

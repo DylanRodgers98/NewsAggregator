@@ -7,6 +7,8 @@ import com.csc306.coursework.model.UserProfile
 import com.google.firebase.database.*
 import java.net.URLDecoder
 import java.net.URLEncoder
+import java.util.*
+import kotlin.collections.ArrayList
 
 object RealtimeDatabaseManager {
 
@@ -22,6 +24,9 @@ object RealtimeDatabaseManager {
     private const val TITLE_KEYWORDS_PATH = "titleKeywords"
     private const val USER_PROFILE_PATH = "profile"
     private const val ARTICLE_LIMIT = 20
+    private const val LIKED_ARTICLE_LIMIT = 5
+    private val MAP_STRING_STRING_TYPE = object : GenericTypeIndicator<Map<String, String>>() { }
+    private val MAP_STRING_ANY_TYPE = object : GenericTypeIndicator<Map<String, Any>>() { }
 
     private var mDatabase: FirebaseDatabase = FirebaseDatabase.getInstance()
 
@@ -107,16 +112,16 @@ object RealtimeDatabaseManager {
             })
     }
 
-    fun removeDislikedArticles(userUid: String, articles: MutableList<Article>, doneCallback: (articles: MutableList<Article>) -> Unit) {
+    fun removeDislikedArticlesFromList(userUid: String, articles: MutableList<Article>, doneCallback: (articles: MutableList<Article>) -> Unit) {
         val query: Query = mDatabase.getReference(USERS_PATH)
             .child(userUid)
             .child(DISLIKES_PATH)
             .orderByChild(ARTICLE_URL_PATH)
 
-        removeDislikedArticles(query, articles.iterator().withIndex(), articles, doneCallback)
+        removeDislikedArticlesFromList(query, articles.iterator().withIndex(), articles, doneCallback)
     }
 
-    private fun removeDislikedArticles(query: Query, iterator: Iterator<IndexedValue<Article>>, articles: MutableList<Article>, doneCallback: (articles: MutableList<Article>) -> Unit) {
+    private fun removeDislikedArticlesFromList(query: Query, iterator: Iterator<IndexedValue<Article>>, articles: MutableList<Article>, doneCallback: (articles: MutableList<Article>) -> Unit) {
         if (iterator.hasNext()) {
             val newArticles: MutableList<Article> = articles.toMutableList()
             val article: IndexedValue<Article> = iterator.next()
@@ -126,7 +131,7 @@ object RealtimeDatabaseManager {
                     if (it.exists()) {
                         newArticles.removeAt(article.index)
                     }
-                    removeDislikedArticles(query, iterator, newArticles, doneCallback)
+                    removeDislikedArticlesFromList(query, iterator, newArticles, doneCallback)
                 })
         } else {
             doneCallback(articles)
@@ -145,8 +150,7 @@ object RealtimeDatabaseManager {
                 val articleRef: DatabaseReference = mDatabase.getReference(ARTICLES_PATH).child(articleURL)
                 articleRef.addListenerForSingleValueEvent(ThrowingValueEventListener {
                     if (it.exists()) {
-                        val mapStringAnyType = object : GenericTypeIndicator<Map<String, Any>>() {}
-                        val articleData: Map<String, Any> = it.getValue(mapStringAnyType)!!
+                        val articleData: Map<String, Any> = it.getValue(MAP_STRING_ANY_TYPE)!!
                         val titleKeywords: Map<String, Double>? = articleData[TITLE_KEYWORDS_PATH] as Map<String, Double>?
                         article.titleKeywords = titleKeywords
                     } else {
@@ -214,17 +218,19 @@ object RealtimeDatabaseManager {
     }
 
     fun getUserLikes(userUid: String, doneCallback: (articles: MutableList<Article>) -> Unit) {
+        getUserLikes(userUid, ARTICLE_LIMIT, doneCallback)
+    }
+
+    private fun getUserLikes(userUid: String, limit: Int, doneCallback: (articles: MutableList<Article>) -> Unit) {
         mDatabase.getReference(USERS_PATH)
             .child(userUid)
             .child(LIKES_PATH)
             .orderByChild(LIKED_AT_PATH)
-            .limitToFirst(ARTICLE_LIMIT)
+            .limitToFirst(limit)
             .addListenerForSingleValueEvent(ThrowingValueEventListener {
                 val articleURLs: List<String> = it.children.map { snapshot ->
-                    val mapStringAnyType = object : GenericTypeIndicator<Map<String, Any>>() {}
-                    val likeData: Map<String, Any> = snapshot.getValue(mapStringAnyType)!!
-                    likeData[ARTICLE_URL_PATH] as String
-                }.reversed()
+                    snapshot.getValue(MAP_STRING_ANY_TYPE)!![ARTICLE_URL_PATH] as String
+                }.reversed() // list ordered by likedAt in ascending order, so need to reverse
                 getArticlesByURLs(articleURLs, doneCallback)
             })
     }
@@ -286,8 +292,7 @@ object RealtimeDatabaseManager {
         userFollowingUsersRef.orderByValue().equalTo(userToFollowUid)
             .addListenerForSingleValueEvent(ThrowingValueEventListener {
                 if (it.exists()) {
-                    val mapStringStringType = object : GenericTypeIndicator<Map<String, String>>() { }
-                    val followingData: Map<String, String> = it.getValue(mapStringStringType)!!
+                    val followingData: Map<String, String> = it.getValue(MAP_STRING_STRING_TYPE)!!
                     if (followingData.size == 1) {
                         val key: String = followingData.keys.first()
                         userFollowingUsersRef.child(key).removeValue()
@@ -295,6 +300,47 @@ object RealtimeDatabaseManager {
                     }
                 }
             })
+    }
+
+    fun getArticlesLikedByFollowedUsers(userUid: String, doneCallback: (articles: MutableList<Article>) -> Unit) {
+        mDatabase.getReference(USERS_PATH)
+            .child(userUid)
+            .child(FOLLOWING_PATH)
+            .child(USERS_PATH)
+            .addListenerForSingleValueEvent(ThrowingValueEventListener {
+                val followedUserUids: MutableList<String> = mutableListOf()
+                it.children.forEach { snapshot ->
+                    val data: Map<String, String> = snapshot.getValue(MAP_STRING_STRING_TYPE)!!
+                    if (data.size == 1) {
+                        followedUserUids.add(data.values.first())
+                    }
+                }
+                getArticlesLikedByUsers(followedUserUids, doneCallback)
+            })
+    }
+
+    private fun getArticlesLikedByUsers(userUids: List<String>, doneCallback: (articles: MutableList<Article>) -> Unit) {
+        getArticlesLikedByUsers(userUids.iterator(), mutableListOf(), doneCallback)
+    }
+
+    private fun getArticlesLikedByUsers(iterator: Iterator<String>, articles: MutableList<Article>, doneCallback: (articles: MutableList<Article>) -> Unit) {
+        if (iterator.hasNext()) {
+            val userUid: String = iterator.next()
+            getUserLikes(userUid, LIKED_ARTICLE_LIMIT) { likedArticles ->
+                likedArticles.forEach { article ->
+                    val matchingArticle: Article? = articles.find { it == article }
+                    if (matchingArticle != null) {
+                        matchingArticle.likedBy(userUid)
+                    } else {
+                        article.likedBy(userUid)
+                        articles.add(article)
+                    }
+                }
+                getArticlesLikedByUsers(iterator, articles, doneCallback)
+            }
+        } else {
+            doneCallback(articles)
+        }
     }
 
 }

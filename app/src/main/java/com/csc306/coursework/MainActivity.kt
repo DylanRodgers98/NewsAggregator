@@ -102,7 +102,7 @@ class MainActivity : AppCompatActivity() {
             .toList()
             .blockingGet()
 
-        removeDislikedArticles(articles)
+        getArticlesLikedByFollowedUsers(articles)
     }
 
     private fun buildArticle(articleDto: ArticleDto): Article {
@@ -116,9 +116,24 @@ class MainActivity : AppCompatActivity() {
         )
     }
 
+    private fun getArticlesLikedByFollowedUsers(articles: MutableList<Article>) {
+        val userUid: String = mAuth.currentUser!!.uid
+        RealtimeDatabaseManager.getArticlesLikedByFollowedUsers(userUid) {
+            it.forEach { article ->
+                val index: Int = articles.indexOf(article)
+                if (index > -1) {
+                    articles[index] = article
+                } else {
+                    articles.add(article)
+                }
+            }
+            removeDislikedArticles(articles)
+        }
+    }
+
     private fun removeDislikedArticles(articles: MutableList<Article>) {
         val userUid: String = mAuth.currentUser!!.uid
-        RealtimeDatabaseManager.removeDislikedArticles(userUid, articles) {
+        RealtimeDatabaseManager.removeDislikedArticlesFromList(userUid, articles) {
             getTitleKeywords(it)
         }
     }
