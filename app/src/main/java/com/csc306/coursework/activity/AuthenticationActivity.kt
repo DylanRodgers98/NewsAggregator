@@ -1,4 +1,4 @@
-package com.csc306.coursework
+package com.csc306.coursework.activity
 
 import android.content.Context
 import android.content.Intent
@@ -9,6 +9,7 @@ import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import com.csc306.coursework.R
 import com.google.android.gms.tasks.OnCompleteListener
 import com.google.android.material.snackbar.Snackbar
 import com.google.firebase.auth.AuthResult

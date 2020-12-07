@@ -5,13 +5,10 @@ import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteException
 import android.database.sqlite.SQLiteOpenHelper
-import com.csc306.coursework.async.ArticleTitleAnalyser
-import com.csc306.coursework.model.Article
-import com.csc306.coursework.model.LikabilityDTO
 import com.dfl.newsapi.model.SourceDto
 import java.util.*
 
-class DatabaseManager(private val context: Context) :
+class DatabaseManager(context: Context) :
     SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
 
     override fun onCreate(database: SQLiteDatabase) {

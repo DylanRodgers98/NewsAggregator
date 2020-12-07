@@ -15,3 +15,4 @@
 .idea
 /app/src/main/res/drawable/*.jpg
 /app/google-services.json
+/app/src/main/res/values/secrets.xml

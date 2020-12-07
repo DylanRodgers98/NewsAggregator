@@ -13,7 +13,7 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
         <activity
-            android:name=".AuthenticationActivity"
+            android:name=".activity.AuthenticationActivity"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -21,11 +21,11 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".FirstTimeSetupActivity" />
-        <activity android:name=".MainActivity" />
-        <activity android:name=".SettingsActivity" />
-        <activity android:name=".UpdateUserProfileActivity" />
-        <activity android:name=".UserProfileActivity" />
+        <activity android:name=".activity.FirstTimeSetupActivity" />
+        <activity android:name=".activity.MainActivity" />
+        <activity android:name=".activity.SettingsActivity" />
+        <activity android:name=".activity.UpdateUserProfileActivity" />
+        <activity android:name=".activity.UserProfileActivity" />
     </application>
 
 </manifest>

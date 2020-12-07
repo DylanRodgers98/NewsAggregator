@@ -1,4 +1,4 @@
-package com.csc306.coursework
+package com.csc306.coursework.activity
 
 import android.content.Intent
 import android.graphics.Bitmap
@@ -11,6 +11,7 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.drawToBitmap
+import com.csc306.coursework.R
 import com.csc306.coursework.database.RealtimeDatabaseManager
 import com.csc306.coursework.model.UserProfile
 import com.google.android.material.snackbar.Snackbar

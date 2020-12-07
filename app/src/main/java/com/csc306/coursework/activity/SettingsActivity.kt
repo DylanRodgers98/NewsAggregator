@@ -1,10 +1,11 @@
-package com.csc306.coursework
+package com.csc306.coursework.activity
 
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.csc306.coursework.R
 import com.csc306.coursework.adapter.FollowCategoriesAdapter
 import com.csc306.coursework.database.CategoriesFollowingValueEventListener
 import com.csc306.coursework.database.RealtimeDatabaseManager
