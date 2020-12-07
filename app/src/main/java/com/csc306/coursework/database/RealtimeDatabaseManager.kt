@@ -151,9 +151,9 @@ object RealtimeDatabaseManager {
                         val titleKeywords: Map<String, Double> = articleData[TITLE_KEYWORDS_PATH] as Map<String, Double>
                         article.titleKeywords = titleKeywords
                     } else {
-                        val titleKeywords: Map<String, Double> = ArticleTitleAnalyser(context).execute(article).get()
+                        val titleKeywords: Map<String, Double>? = ArticleTitleAnalyser(context).execute(article).get()
                         // encode keys to remove illegal characters for storing in Firebase
-                        article.titleKeywords = titleKeywords.mapKeys { entry -> firebaseEncode(entry.key) }
+                        article.titleKeywords = titleKeywords?.mapKeys { entry -> firebaseEncode(entry.key) }
                         articleRef.setValue(article)
                     }
                     articles.add(article)
