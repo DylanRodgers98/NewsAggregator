@@ -23,8 +23,6 @@ class UserProfileActivity : AppCompatActivity() {
 
     private lateinit var mAuth: FirebaseAuth
 
-    private lateinit var mDatabaseManager: DatabaseManager
-
     private lateinit var mRecyclerView: RecyclerView
 
     private lateinit var mToolbar: Toolbar
@@ -38,7 +36,6 @@ class UserProfileActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         mAuth = FirebaseAuth.getInstance()
-        mDatabaseManager = DatabaseManager(this)
         mUserUid = intent.getStringExtra(USER_UID)!!
 
         setContentView(R.layout.activity_user_profile)
@@ -135,7 +132,7 @@ class UserProfileActivity : AppCompatActivity() {
 
     private fun getUserLikes() {
         RealtimeDatabaseManager.getUserLikes(mUserUid) { articles ->
-            val adapter = ArticleListAdapter(articles, mAuth, mDatabaseManager, this)
+            val adapter = ArticleListAdapter(articles, mAuth, this)
             mRecyclerView.adapter = adapter
 
             val itemTouchHelper = ItemTouchHelper(ArticleListAdapter.SwipeCallback(adapter))

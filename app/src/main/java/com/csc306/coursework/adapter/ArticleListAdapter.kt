@@ -9,7 +9,6 @@ import android.widget.TextView
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.RecyclerView
 import com.csc306.coursework.R
-import com.csc306.coursework.database.DatabaseManager
 import com.csc306.coursework.database.RealtimeDatabaseManager
 import com.csc306.coursework.model.Article
 import com.google.android.material.snackbar.Snackbar
@@ -22,7 +21,6 @@ import java.util.concurrent.TimeUnit
 class ArticleListAdapter(
     private val articles: MutableList<Article>,
     private val auth: FirebaseAuth,
-    private val database: DatabaseManager,
     private val context: Context
 ) : RecyclerView.Adapter<ArticleListAdapter.ViewHolder>() {
 
@@ -67,9 +65,7 @@ class ArticleListAdapter(
             val userUid: String = auth.currentUser!!.uid
             val article: Article = articles[position]
             notifyItemChanged(position)
-            RealtimeDatabaseManager.likeArticle(userUid, article) {
-                database.likeArticle(article)
-            }
+            RealtimeDatabaseManager.likeArticle(userUid, article, context)
             showSnackbar(view, context.getString(R.string.you_liked), article.title)
         }
     }
@@ -79,9 +75,7 @@ class ArticleListAdapter(
             val userUid: String = auth.currentUser!!.uid
             val article: Article = articles[position]
             removeArticleAt(position)
-            RealtimeDatabaseManager.dislikeArticle(userUid, article) {
-                database.dislikeArticle(article)
-            }
+            RealtimeDatabaseManager.dislikeArticle(userUid, article, context)
             showSnackbar(view, context.getString(R.string.you_disliked), article.title)
         }
     }

@@ -3,12 +3,11 @@ package com.csc306.coursework.database
 import android.content.Context
 import com.csc306.coursework.async.ArticleTitleAnalyser
 import com.csc306.coursework.model.Article
+import com.csc306.coursework.model.LikabilityDTO
 import com.csc306.coursework.model.UserProfile
 import com.google.firebase.database.*
 import java.net.URLDecoder
 import java.net.URLEncoder
-import java.util.*
-import kotlin.collections.ArrayList
 
 object RealtimeDatabaseManager {
 
@@ -23,10 +22,14 @@ object RealtimeDatabaseManager {
     private const val ARTICLES_PATH = "articles"
     private const val TITLE_KEYWORDS_PATH = "titleKeywords"
     private const val USER_PROFILE_PATH = "profile"
+    private const val KEYWORD_LIKABILITY_PATH = "keywordLikability"
+    private const val TOTAL_SALIENCE_PATH = "totalSalience"
+    private const val COUNT_PATH = "count"
     private const val ARTICLE_LIMIT = 20
     private const val LIKED_ARTICLE_LIMIT = 5
     private val MAP_STRING_STRING_TYPE = object : GenericTypeIndicator<Map<String, String>>() { }
     private val MAP_STRING_ANY_TYPE = object : GenericTypeIndicator<Map<String, Any>>() { }
+    private val MAP_STRING_DOUBLE_TYPE = object : GenericTypeIndicator<Map<String, Double>>() { }
 
     private var mDatabase: FirebaseDatabase = FirebaseDatabase.getInstance()
 
@@ -46,7 +49,7 @@ object RealtimeDatabaseManager {
             .addListenerForSingleValueEvent(valueEventListener)
     }
 
-    fun likeArticle(userUid: String, article: Article, callback: () -> Unit) {
+    fun likeArticle(userUid: String, article: Article, context: Context) {
         val articleURL: String = firebaseEncode(article.articleURL)
 
         val articleRef: DatabaseReference = mDatabase.getReference(ARTICLES_PATH).child(articleURL)
@@ -58,6 +61,8 @@ object RealtimeDatabaseManager {
 
         val userRef: DatabaseReference = mDatabase.getReference(USERS_PATH).child(userUid)
 
+        updateLikabilityForKeywords(article, context, userRef, true)
+
         val userLikesRef: DatabaseReference = userRef.child(LIKES_PATH)
         userLikesRef.orderByChild(ARTICLE_URL_PATH).equalTo(articleURL)
             .addListenerForSingleValueEvent(ThrowingValueEventListener {
@@ -66,7 +71,6 @@ object RealtimeDatabaseManager {
                         ARTICLE_URL_PATH to articleURL,
                         LIKED_AT_PATH to System.currentTimeMillis()
                     ))
-                    callback()
                 }
             })
 
@@ -79,7 +83,7 @@ object RealtimeDatabaseManager {
             })
     }
 
-    fun dislikeArticle(userUid: String, article: Article, callback: () -> Unit) {
+    fun dislikeArticle(userUid: String, article: Article, context: Context) {
         val articleURL: String = firebaseEncode(article.articleURL)
 
         val articleRef: DatabaseReference = mDatabase.getReference(ARTICLES_PATH).child(articleURL)
@@ -91,6 +95,8 @@ object RealtimeDatabaseManager {
 
         val userRef: DatabaseReference = mDatabase.getReference(USERS_PATH).child(userUid)
 
+        updateLikabilityForKeywords(article, context, userRef, false)
+
         val userDislikesRef: DatabaseReference = userRef.child(DISLIKES_PATH)
         userDislikesRef.orderByChild(ARTICLE_URL_PATH).equalTo(articleURL)
             .addListenerForSingleValueEvent(ThrowingValueEventListener {
@@ -99,7 +105,6 @@ object RealtimeDatabaseManager {
                         ARTICLE_URL_PATH to articleURL,
                         DISLIKED_AT_PATH to System.currentTimeMillis()
                     ))
-                    callback()
                 }
             })
 
@@ -112,7 +117,45 @@ object RealtimeDatabaseManager {
             })
     }
 
-    fun removeDislikedArticlesFromList(userUid: String, articles: MutableList<Article>, doneCallback: (articles: MutableList<Article>) -> Unit) {
+    private fun updateLikabilityForKeywords(article: Article, context: Context, userRef: DatabaseReference, isPositive: Boolean) {
+        if (article.titleKeywords == null) {
+            article.titleKeywords = ArticleTitleAnalyser(context).execute(article).get()
+        }
+
+        val keywordLikabilityRef: DatabaseReference = userRef.child(KEYWORD_LIKABILITY_PATH)
+
+        article.titleKeywords?.forEach { (keyword, salience) ->
+            var totalSalience: Double = if (isPositive) salience else -salience
+            var count = 1.0
+
+            val encodedKeyword: String = firebaseEncode(keyword)
+            val keywordRef: DatabaseReference = keywordLikabilityRef.child(encodedKeyword)
+            keywordRef.addListenerForSingleValueEvent(ThrowingValueEventListener {
+                if (it.exists()) {
+                    val keywordLikability: Map<String, Double> = it.getValue(MAP_STRING_DOUBLE_TYPE)!!
+                    totalSalience += keywordLikability[TOTAL_SALIENCE_PATH] ?: 0.0
+                    count += keywordLikability[COUNT_PATH] ?: 0.0
+                }
+                keywordRef.setValue(mapOf(
+                    TOTAL_SALIENCE_PATH to totalSalience,
+                    COUNT_PATH to count
+                ))
+            })
+        }
+    }
+
+    fun sortArticlesByLikability(userUid: String, articles: MutableList<Article>, context: Context, doneCallback: (articles: List<Article>) -> Unit) {
+        removeDislikedArticlesFromList(userUid, articles) {
+            getArticleTitleKeywords(it, context) { analysedArticles ->
+                buildLikabilityDTOs(userUid, analysedArticles.iterator(), mutableListOf()) { likabilityDTOs ->
+                    likabilityDTOs.sortByDescending { likabilityDTO -> likabilityDTO.likabilityFactor }
+                    doneCallback(likabilityDTOs.map { likabilityDTO -> likabilityDTO.article })
+                }
+            }
+        }
+    }
+
+    private fun removeDislikedArticlesFromList(userUid: String, articles: MutableList<Article>, doneCallback: (articles: MutableList<Article>) -> Unit) {
         val query: Query = mDatabase.getReference(USERS_PATH)
             .child(userUid)
             .child(DISLIKES_PATH)
@@ -138,7 +181,7 @@ object RealtimeDatabaseManager {
         }
     }
 
-    fun getArticleTitleKeywords(articles: List<Article>, context: Context, doneCallback: (articles: MutableList<Article>) -> Unit) {
+    private fun getArticleTitleKeywords(articles: List<Article>, context: Context, doneCallback: (articles: MutableList<Article>) -> Unit) {
         getArticleTitleKeywords(articles.iterator(), mutableListOf(), context, doneCallback)
     }
 
@@ -171,6 +214,53 @@ object RealtimeDatabaseManager {
                 it.titleKeywords = it.titleKeywords?.mapKeys { entry -> firebaseDecode(entry.key) }
             }
             doneCallback(articles)
+        }
+    }
+
+    private fun buildLikabilityDTOs(userUid: String, iterator: Iterator<Article>, likabilityDTOs: MutableList<LikabilityDTO>, doneCallback: (articles: MutableList<LikabilityDTO>) -> Unit) {
+        if (iterator.hasNext()) {
+            val article: Article = iterator.next()
+            if (article.titleKeywords != null) {
+                getLikabilityForArticle(userUid, article.titleKeywords!!) { likabilityFactor ->
+                    likabilityDTOs.add(LikabilityDTO(article, likabilityFactor))
+                    buildLikabilityDTOs(userUid, iterator, likabilityDTOs, doneCallback)
+                }
+            } else {
+                likabilityDTOs.add(LikabilityDTO(article, 0.0))
+                buildLikabilityDTOs(userUid, iterator, likabilityDTOs, doneCallback)
+            }
+        } else {
+            doneCallback(likabilityDTOs)
+        }
+    }
+
+    private fun getLikabilityForArticle(userUid: String, keywords: Map<String, Double>, doneCallback: (likabilityFactor: Double) -> Unit) {
+        getLikabilityForArticle(userUid, keywords.iterator(), 0.0, doneCallback)
+    }
+
+    private fun getLikabilityForArticle(userUid: String, iterator: Iterator<Map.Entry<String, Double>>, currentLikabilityFactor: Double, doneCallback: (likabilityFactor: Double) -> Unit) {
+        if (iterator.hasNext()) {
+            val keywordSalience: Map.Entry<String, Double> = iterator.next()
+            val encodedKeyword: String = firebaseEncode(keywordSalience.key)
+            val salience: Double = keywordSalience.value
+
+            mDatabase.getReference(USERS_PATH)
+                .child(userUid)
+                .child(KEYWORD_LIKABILITY_PATH)
+                .child(encodedKeyword)
+                .addListenerForSingleValueEvent(ThrowingValueEventListener {
+                    var newLikabilityFactor = currentLikabilityFactor
+                    if (it.exists()) {
+                        val data: Map<String, Double> = it.getValue(MAP_STRING_DOUBLE_TYPE)!!
+                        val totalSalience: Double = data[TOTAL_SALIENCE_PATH] ?: 0.0
+                        val count: Double = data[COUNT_PATH] ?: 0.0
+                        val likabilityFactor: Double = (totalSalience / count)
+                        newLikabilityFactor += salience * likabilityFactor
+                    }
+                    getLikabilityForArticle(userUid, iterator, newLikabilityFactor, doneCallback)
+                })
+        } else {
+            doneCallback(currentLikabilityFactor)
         }
     }
 

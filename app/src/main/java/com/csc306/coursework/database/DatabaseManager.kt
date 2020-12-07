@@ -55,62 +55,6 @@ class DatabaseManager(private val context: Context) :
         throw SQLiteException("Found no sources in database. Has first time setup taken place?")
     }
 
-    fun likeArticle(article: Article) {
-        updateLikabilityForArticle(article, true)
-    }
-
-    fun dislikeArticle(article: Article) {
-        updateLikabilityForArticle(article, false)
-    }
-
-    private fun updateLikabilityForArticle(article: Article, positive: Boolean) {
-        if (article.titleKeywords == null) {
-            article.titleKeywords = ArticleTitleAnalyser(context).execute(article).get()
-        }
-        updateLikabilityForKeywords(article.titleKeywords!!, positive)
-    }
-
-    private fun updateLikabilityForKeywords(titleKeywords: Map<String, Double>, positive: Boolean) {
-        doWithinTransaction(this.writableDatabase) { db ->
-            titleKeywords.entries.forEach {
-                val keyword: String = it.key
-                val salience: Double = it.value
-
-                var totalSalience: Double = if (positive) salience else -salience
-                var count = 1.0
-
-                val query = "SELECT $COLUMN_TOTAL_SALIENCE, $COLUMN_COUNT FROM $TABLE_SWIPED_KEYWORD WHERE $COLUMN_KEYWORD=?"
-                db.rawQuery(query, arrayOf(keyword)).use { cursor ->
-                    if (cursor.moveToFirst()) {
-                        totalSalience += cursor.getFloat(0)
-                        count += cursor.getFloat(1)
-                    }
-                }
-
-                val values = ContentValues()
-                values.put(COLUMN_KEYWORD, keyword)
-                values.put(COLUMN_TOTAL_SALIENCE, totalSalience)
-                values.put(COLUMN_COUNT, count)
-                db.insertWithOnConflict(TABLE_SWIPED_KEYWORD,null, values, SQLiteDatabase.CONFLICT_REPLACE)
-            }
-        }
-    }
-
-    fun getLikabilityForKeywords(keywords: Collection<String>): List<LikabilityDTO> {
-        val query = "SELECT $COLUMN_KEYWORD, $COLUMN_TOTAL_SALIENCE / $COLUMN_COUNT FROM $TABLE_SWIPED_KEYWORD WHERE $COLUMN_KEYWORD IN (?)"
-        val likabilityDTOs: MutableList<LikabilityDTO> = mutableListOf()
-        this.readableDatabase.rawQuery(query, arrayOf(keywords.joinToString())).use { cursor ->
-            if (cursor.moveToFirst()) {
-                do {
-                    val keyword: String = cursor.getString(0)
-                    val likability: Double = cursor.getDouble(1)
-                    likabilityDTOs.add(LikabilityDTO(keyword, likability))
-                } while (cursor.moveToNext())
-            }
-        }
-        return likabilityDTOs
-    }
-
     private fun doWithinTransaction(db: SQLiteDatabase, databaseAction: (db: SQLiteDatabase) -> Unit) {
         db.beginTransaction()
         try {

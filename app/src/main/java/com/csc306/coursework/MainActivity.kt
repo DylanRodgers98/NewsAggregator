@@ -15,7 +15,6 @@ import com.csc306.coursework.database.DatabaseManager
 import com.csc306.coursework.database.RealtimeDatabaseManager
 import com.csc306.coursework.database.ThrowingValueEventListener
 import com.csc306.coursework.model.Article
-import com.csc306.coursework.model.ArticleLikabilityComparator
 import com.dfl.newsapi.NewsApiRepository
 import com.dfl.newsapi.model.ArticleDto
 import com.google.android.material.snackbar.Snackbar
@@ -32,8 +31,6 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var mAuth: FirebaseAuth
 
-    private lateinit var mArticleComparator: ArticleLikabilityComparator
-
     private lateinit var mRecyclerView: RecyclerView
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -41,7 +38,6 @@ class MainActivity : AppCompatActivity() {
         mDatabaseManager = DatabaseManager(this)
         mNewsApi = NewsApiRepository(getString(R.string.news_api_key))
         mAuth = FirebaseAuth.getInstance()
-        mArticleComparator = ArticleLikabilityComparator(mDatabaseManager, this)
         setContentView(R.layout.activity_recycler_and_toolbar)
 
         val toolbar: Toolbar = findViewById(R.id.toolbar)
@@ -127,31 +123,19 @@ class MainActivity : AppCompatActivity() {
                     articles.add(article)
                 }
             }
-            removeDislikedArticles(articles)
-        }
-    }
-
-    private fun removeDislikedArticles(articles: MutableList<Article>) {
-        val userUid: String = mAuth.currentUser!!.uid
-        RealtimeDatabaseManager.removeDislikedArticlesFromList(userUid, articles) {
-            getTitleKeywords(it)
-        }
-    }
-
-    private fun getTitleKeywords(articles: MutableList<Article>) {
-        RealtimeDatabaseManager.getArticleTitleKeywords(articles, this) {
-            attachAdapterToRecyclerView(it)
+            attachAdapterToRecyclerView(articles)
         }
     }
 
     private fun attachAdapterToRecyclerView(articles: MutableList<Article>) {
-        articles.sortWith(mArticleComparator)
+        val userUid: String = mAuth.currentUser!!.uid
+        RealtimeDatabaseManager.sortArticlesByLikability(userUid, articles, this) { sortedArticles ->
+            val adapter = ArticleListAdapter(sortedArticles.toMutableList(), mAuth, this)
+            mRecyclerView.adapter = adapter
 
-        val adapter = ArticleListAdapter(articles, mAuth, mDatabaseManager, this)
-        mRecyclerView.adapter = adapter
-
-        val itemTouchHelper = ItemTouchHelper(ArticleListAdapter.SwipeCallback(adapter))
-        itemTouchHelper.attachToRecyclerView(mRecyclerView)
+            val itemTouchHelper = ItemTouchHelper(ArticleListAdapter.SwipeCallback(adapter))
+            itemTouchHelper.attachToRecyclerView(mRecyclerView)
+        }
     }
 
 }
