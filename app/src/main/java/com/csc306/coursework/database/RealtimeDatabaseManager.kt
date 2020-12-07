@@ -226,7 +226,7 @@ object RealtimeDatabaseManager {
                     val mapStringAnyType = object : GenericTypeIndicator<Map<String, Any>>() {}
                     val likeData: Map<String, Any> = snapshot.getValue(mapStringAnyType)!!
                     likeData[ARTICLE_URL_PATH] as String
-                }
+                }.reversed()
                 getArticles(articleURLs, doneCallback)
             })
     }

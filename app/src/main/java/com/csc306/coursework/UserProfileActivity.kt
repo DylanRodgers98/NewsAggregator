@@ -84,6 +84,7 @@ class UserProfileActivity : AppCompatActivity() {
             }
             val displayNameTextView: TextView = findViewById(R.id.display_name)
             displayNameTextView.text = userProfile.displayName
+            mToolbar.title = userProfile.displayName
             val locationTextView: TextView = findViewById(R.id.location)
             locationTextView.text = userProfile.location
             if (userProfile.profilePicURI != null) {

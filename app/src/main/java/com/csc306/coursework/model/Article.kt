@@ -1,5 +1,7 @@
 package com.csc306.coursework.model
 
+import org.apache.commons.lang3.StringUtils
+
 class Article(
     val source: String,
     val publishDateMillis: Long,
@@ -8,6 +10,16 @@ class Article(
     val description: String?,
     val articleURL: String
 ) {
+    // no-arg constructor for bean mapping
+    constructor() : this(
+        StringUtils.EMPTY,
+        0L,
+        null,
+        StringUtils.EMPTY,
+        null,
+        StringUtils.EMPTY
+    )
+
     var titleKeywords: Map<String, Double>? = null
 
     override fun equals(other: Any?): Boolean {
