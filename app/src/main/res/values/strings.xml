@@ -40,4 +40,5 @@
     <string name="location">Location</string>
     <string name="saving_profile">Saving profile...</string>
     <string name="error_saving_profile">Error saving profile:</string>
+    <string name="user_likes_toolbar_title">\'s Likes</string>
 </resources>

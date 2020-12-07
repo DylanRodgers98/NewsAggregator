@@ -64,16 +64,6 @@
 
     </androidx.appcompat.widget.LinearLayoutCompat>
 
-    <androidx.appcompat.widget.AppCompatTextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/likes"
-        android:textColor="@color/textDark"
-        android:textSize="18sp"
-        android:paddingTop="6dp"
-        android:paddingStart="6dp"
-        android:paddingEnd="6dp" />
-
     <view class="androidx.recyclerview.widget.RecyclerView"
         android:id="@+id/recycler_view"
         android:layout_width="match_parent"

@@ -41,14 +41,31 @@ class UserProfileActivity : AppCompatActivity() {
         setSupportActionBar(mToolbar)
 
         mUserUid = intent.getStringExtra(USER_UID)!!
+        getUserProfile()
 
         mRecyclerView = findViewById(R.id.recycler_view)
         mRecyclerView.layoutManager = LinearLayoutManager(this)
     }
 
+    private fun getUserProfile() {
+        RealtimeDatabaseManager.getUserProfile(mUserUid) { userProfile ->
+            if (userProfile == null) {
+                throw Exception("")
+            }
+            val displayNameTextView: TextView = findViewById(R.id.display_name)
+            displayNameTextView.text = userProfile.displayName
+            mToolbar.title = userProfile.displayName + getString(R.string.user_likes_toolbar_title)
+            val locationTextView: TextView = findViewById(R.id.location)
+            locationTextView.text = userProfile.location
+            if (userProfile.profilePicURI != null) {
+                val profilePicImageView: ImageView = findViewById(R.id.profile_pic)
+                Picasso.get().load(userProfile.profilePicURI).into(profilePicImageView)
+            }
+        }
+    }
+
     override fun onStart() {
         super.onStart()
-        getUserProfile()
         getUserLikes()
     }
 
@@ -75,23 +92,6 @@ class UserProfileActivity : AppCompatActivity() {
             }
         }
         return super.onOptionsItemSelected(item)
-    }
-
-    private fun getUserProfile() {
-        RealtimeDatabaseManager.getUserProfile(mUserUid) { userProfile ->
-            if (userProfile == null) {
-                throw Exception("")
-            }
-            val displayNameTextView: TextView = findViewById(R.id.display_name)
-            displayNameTextView.text = userProfile.displayName
-            mToolbar.title = userProfile.displayName
-            val locationTextView: TextView = findViewById(R.id.location)
-            locationTextView.text = userProfile.location
-            if (userProfile.profilePicURI != null) {
-                val profilePicImageView: ImageView = findViewById(R.id.profile_pic)
-                Picasso.get().load(userProfile.profilePicURI).into(profilePicImageView)
-            }
-        }
     }
 
     private fun getUserLikes() {
