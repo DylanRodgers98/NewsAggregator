@@ -3,10 +3,8 @@ package com.csc306.coursework.database
 import android.content.Context
 import com.csc306.coursework.async.ArticleTitleAnalyser
 import com.csc306.coursework.model.Article
-import com.csc306.coursework.model.Category
 import com.csc306.coursework.model.UserProfile
 import com.google.firebase.database.*
-import java.lang.Exception
 import java.net.URLDecoder
 import java.net.URLEncoder
 
@@ -149,7 +147,7 @@ object RealtimeDatabaseManager {
                     if (it.exists()) {
                         val mapStringAnyType = object : GenericTypeIndicator<Map<String, Any>>() {}
                         val articleData: Map<String, Any> = it.getValue(mapStringAnyType)!!
-                        val titleKeywords: Map<String, Double> = articleData[TITLE_KEYWORDS_PATH] as Map<String, Double>
+                        val titleKeywords: Map<String, Double>? = articleData[TITLE_KEYWORDS_PATH] as Map<String, Double>?
                         article.titleKeywords = titleKeywords
                     } else {
                         val titleKeywords: Map<String, Double>? = ArticleTitleAnalyser(context).execute(article).get()
@@ -227,15 +225,15 @@ object RealtimeDatabaseManager {
                     val likeData: Map<String, Any> = snapshot.getValue(mapStringAnyType)!!
                     likeData[ARTICLE_URL_PATH] as String
                 }.reversed()
-                getArticles(articleURLs, doneCallback)
+                getArticlesByURLs(articleURLs, doneCallback)
             })
     }
 
-    private fun getArticles(articleURLs: List<String>, doneCallback: (articles: MutableList<Article>) -> Unit) {
-        getArticles(articleURLs.iterator(), mutableListOf(), doneCallback)
+    private fun getArticlesByURLs(articleURLs: List<String>, doneCallback: (articles: MutableList<Article>) -> Unit) {
+        getArticlesByURLs(articleURLs.iterator(), mutableListOf(), doneCallback)
     }
 
-    private fun getArticles(iterator: Iterator<String>, articles: MutableList<Article>, doneCallback: (articles: MutableList<Article>) -> Unit) {
+    private fun getArticlesByURLs(iterator: Iterator<String>, articles: MutableList<Article>, doneCallback: (articles: MutableList<Article>) -> Unit) {
         if (iterator.hasNext()) {
             val articleURL: String = iterator.next()
             mDatabase.getReference(ARTICLES_PATH)
@@ -245,11 +243,58 @@ object RealtimeDatabaseManager {
                         val article: Article = it.getValue(Article::class.java)!!
                         articles.add(article)
                     }
-                    getArticles(iterator, articles, doneCallback)
+                    getArticlesByURLs(iterator, articles, doneCallback)
                 })
         } else {
             doneCallback(articles)
         }
+    }
+
+    fun isFollowingUser(userUid: String, userUidToQuery: String, doneCallback: (isFollowing: Boolean) -> Unit) {
+        mDatabase.getReference(USERS_PATH)
+            .child(userUid)
+            .child(FOLLOWING_PATH)
+            .child(USERS_PATH)
+            .orderByValue()
+            .equalTo(userUidToQuery)
+            .addListenerForSingleValueEvent(ThrowingValueEventListener {
+                doneCallback(it.exists())
+            })
+    }
+
+    fun followUser(userUid: String, userToFollowUid: String, onSuccess: () -> Unit) {
+        val userFollowingUsersRef: DatabaseReference = mDatabase.getReference(USERS_PATH)
+            .child(userUid)
+            .child(FOLLOWING_PATH)
+            .child(USERS_PATH)
+
+        userFollowingUsersRef.orderByValue().equalTo(userToFollowUid)
+            .addListenerForSingleValueEvent(ThrowingValueEventListener {
+                if (!it.exists()) {
+                    userFollowingUsersRef.push().setValue(userToFollowUid)
+                        .addOnSuccessListener { onSuccess() }
+                }
+            })
+    }
+
+    fun unfollowUser(userUid: String, userToFollowUid: String, onSuccess: () -> Unit) {
+        val userFollowingUsersRef: DatabaseReference = mDatabase.getReference(USERS_PATH)
+            .child(userUid)
+            .child(FOLLOWING_PATH)
+            .child(USERS_PATH)
+
+        userFollowingUsersRef.orderByValue().equalTo(userToFollowUid)
+            .addListenerForSingleValueEvent(ThrowingValueEventListener {
+                if (it.exists()) {
+                    val mapStringStringType = object : GenericTypeIndicator<Map<String, String>>() { }
+                    val followingData: Map<String, String> = it.getValue(mapStringStringType)!!
+                    if (followingData.size == 1) {
+                        val key: String = followingData.keys.first()
+                        userFollowingUsersRef.child(key).removeValue()
+                            .addOnSuccessListener { onSuccess() }
+                    }
+                }
+            })
     }
 
 }

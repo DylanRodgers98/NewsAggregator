@@ -10,6 +10,7 @@
     <string name="sports">Sports</string>
     <string name="technology">Technology</string>
     <string name="follow">Follow</string>
+    <string name="unfollow">Unfollow</string>
     <string name="likes">Likes</string>
     <string name="days_ago">d ago</string>
     <string name="hours_ago">h ago</string>

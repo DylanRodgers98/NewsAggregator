@@ -5,6 +5,7 @@ import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
+import android.widget.Button
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.appcompat.widget.Toolbar
@@ -30,18 +31,32 @@ class UserProfileActivity : AppCompatActivity() {
 
     private lateinit var mUserUid: String
 
+    private lateinit var mBtnFollow: Button
+
+    private var mIsFollowing: Boolean = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         mAuth = FirebaseAuth.getInstance()
         mDatabaseManager = DatabaseManager(this)
+        mUserUid = intent.getStringExtra(USER_UID)!!
 
         setContentView(R.layout.activity_user_profile)
 
         mToolbar = findViewById(R.id.toolbar)
         setSupportActionBar(mToolbar)
 
-        mUserUid = intent.getStringExtra(USER_UID)!!
+        mBtnFollow = findViewById(R.id.btn_follow)
+        mBtnFollow.setOnClickListener {
+            if (mIsFollowing) {
+                unfollowUser()
+            } else {
+                followUser()
+            }
+        }
+
         getUserProfile()
+        isCurrentUserFollowing()
 
         mRecyclerView = findViewById(R.id.recycler_view)
         mRecyclerView.layoutManager = LinearLayoutManager(this)
@@ -50,7 +65,7 @@ class UserProfileActivity : AppCompatActivity() {
     private fun getUserProfile() {
         RealtimeDatabaseManager.getUserProfile(mUserUid) { userProfile ->
             if (userProfile == null) {
-                throw Exception("")
+                throw Exception("Failed to get profile for user with uid $mUserUid") // TODO: CREATE SPECIFIC EXCEPTION
             }
             val displayNameTextView: TextView = findViewById(R.id.display_name)
             displayNameTextView.text = userProfile.displayName
@@ -61,6 +76,30 @@ class UserProfileActivity : AppCompatActivity() {
                 val profilePicImageView: ImageView = findViewById(R.id.profile_pic)
                 Picasso.get().load(userProfile.profilePicURI).into(profilePicImageView)
             }
+        }
+    }
+
+    private fun isCurrentUserFollowing() {
+        val currentUserUid: String = mAuth.currentUser!!.uid
+        RealtimeDatabaseManager.isFollowingUser(currentUserUid, mUserUid) { isFollowing ->
+            mIsFollowing = isFollowing
+            mBtnFollow.text = getString(if (isFollowing) R.string.unfollow else R.string.follow)
+        }
+    }
+
+    private fun followUser() {
+        val currentUserUid: String = mAuth.currentUser!!.uid
+        RealtimeDatabaseManager.followUser(currentUserUid, mUserUid) {
+            mIsFollowing = true
+            mBtnFollow.text = getString(R.string.unfollow)
+        }
+    }
+
+    private fun unfollowUser() {
+        val currentUserUid: String = mAuth.currentUser!!.uid
+        RealtimeDatabaseManager.unfollowUser(currentUserUid, mUserUid) {
+            mIsFollowing = false
+            mBtnFollow.text = getString(R.string.follow)
         }
     }
 
