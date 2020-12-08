@@ -1,8 +1,6 @@
 package com.csc306.coursework.activity
 
-import android.annotation.SuppressLint
 import android.app.SearchManager
-import android.content.Context
 import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
@@ -20,13 +18,9 @@ import com.csc306.coursework.database.RealtimeDatabaseManager
 import com.csc306.coursework.database.ThrowingValueEventListener
 import com.csc306.coursework.model.Article
 import com.csc306.coursework.newsapi.NewsAPIService
-import com.dfl.newsapi.NewsApiRepository
-import com.dfl.newsapi.model.ArticleDto
 import com.google.android.material.snackbar.Snackbar
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.*
-import io.reactivex.schedulers.Schedulers
-import java.time.OffsetDateTime
 
 class MainActivity : AppCompatActivity() {
 
@@ -61,10 +55,19 @@ class MainActivity : AppCompatActivity() {
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.toolbar_articles, menu)
 
-        val searchManager = getSystemService(Context.SEARCH_SERVICE) as SearchManager
-        (menu.findItem(R.id.search).actionView as SearchView).apply {
-            setSearchableInfo(searchManager.getSearchableInfo(componentName))
-        }
+        val searchMenuItem: MenuItem = menu.findItem(R.id.search)
+        val searchView: SearchView = searchMenuItem.actionView as SearchView
+        searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
+            override fun onQueryTextChange(newText: String?): Boolean = true
+            override fun onQueryTextSubmit(query: String?): Boolean {
+                if (query != null) {
+                    val intent: Intent = Intent(applicationContext, SearchResultsActivity::class.java)
+                        .putExtra(SearchManager.QUERY, query)
+                    startActivity(intent)
+                }
+                return true
+            }
+        })
 
         return super.onCreateOptionsMenu(menu)
     }
@@ -98,7 +101,6 @@ class MainActivity : AppCompatActivity() {
         })
     }
 
-    @SuppressLint("CheckResult")
     private fun getArticles(categoriesFollowing: Array<String>) {
         val sourceIds: String = mDatabaseManager.getSourceIdsForCategories(categoriesFollowing)
         val articles: MutableList<Article> = mNewsApi.getTopHeadlines(sourceIds)

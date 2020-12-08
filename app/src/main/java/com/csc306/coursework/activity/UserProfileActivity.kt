@@ -107,7 +107,7 @@ class UserProfileActivity : AppCompatActivity() {
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        menuInflater.inflate(R.menu.toolbar_articles, menu)
+        menuInflater.inflate(R.menu.toolbar_profile, menu)
         return super.onCreateOptionsMenu(menu)
     }
 

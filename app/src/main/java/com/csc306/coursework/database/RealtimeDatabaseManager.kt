@@ -25,12 +25,18 @@ object RealtimeDatabaseManager {
     private const val KEYWORD_LIKABILITY_PATH = "keywordLikability"
     private const val TOTAL_SALIENCE_PATH = "totalSalience"
     private const val COUNT_PATH = "count"
+    private const val SOURCES_PATH = "sources"
+    private const val NAME_PATH = "name"
+    private const val PROFILE_PATH = "profile"
     private const val DISPLAY_NAME_PATH = "displayName"
+    private const val LOCATION_PATH = "location"
+    private const val PROFILE_PIC_URI_PATH = "profilePicURI"
     private const val ARTICLE_LIMIT = 20
     private const val LIKED_ARTICLE_LIMIT = 5
     private const val MAX_PATH_LENGTH = 700
     private val MAP_STRING_STRING_TYPE = object : GenericTypeIndicator<Map<String, String>>() { }
     private val MAP_STRING_ANY_TYPE = object : GenericTypeIndicator<Map<String, Any>>() { }
+    private val MAP_STRING_MAP_STRING_ANY_TYPE = object : GenericTypeIndicator<Map<String, Map<String, Any>>>() { }
     private val MAP_STRING_DOUBLE_TYPE = object : GenericTypeIndicator<Map<String, Double>>() { }
 
     private var mDatabase: FirebaseDatabase = FirebaseDatabase.getInstance()
@@ -450,35 +456,38 @@ object RealtimeDatabaseManager {
             .equalTo(displayName)
             .addListenerForSingleValueEvent(ThrowingValueEventListener {
                 if (it.exists()) {
-                    val userUids: List<String> = it.children.map { snapshot -> snapshot.key!! }
-                    getUserProfilesByUids(userUids, doneCallback)
+                    val users: MutableMap<String, UserProfile> = mutableMapOf()
+                    val usersData: Map<String, Map<String, Any>> = it.getValue(MAP_STRING_MAP_STRING_ANY_TYPE)!!
+                    usersData.entries.forEach { (userUid, userData) ->
+                        val profileData: Map<String, String> = userData[PROFILE_PATH] as Map<String, String>
+                        val userProfile = UserProfile(
+                            profileData[DISPLAY_NAME_PATH]!!,
+                            profileData[LOCATION_PATH],
+                            profileData[PROFILE_PIC_URI_PATH]
+                        )
+                        users[userUid] = userProfile
+                    }
+                    doneCallback(users)
                 } else {
                     doneCallback(null)
                 }
             })
     }
 
-    private fun getUserProfilesByUids(userUids: List<String>, doneCallback: (userProfiles: MutableMap<String, UserProfile>) -> Unit) {
-        getUserProfilesByUids(userUids.iterator(), mutableMapOf(), doneCallback)
-    }
-
-    private fun getUserProfilesByUids(iterator: Iterator<String>, userProfiles: MutableMap<String, UserProfile>, doneCallback: (userProfiles: MutableMap<String, UserProfile>) -> Unit) {
-        if (iterator.hasNext()) {
-            val userUid: String = iterator.next()
-            mDatabase.getReference(USERS_PATH)
-                .child(userUid)
-                .child(USER_PROFILE_PATH)
-                .addListenerForSingleValueEvent(ThrowingValueEventListener {
-                    userProfiles[userUid] = it.getValue(UserProfile::class.java)!!
-                    getUserProfilesByUids(iterator, userProfiles, doneCallback)
-                })
-        } else {
-            doneCallback(userProfiles)
-        }
-    }
-
-    fun findSourcesByQuery(query: String, doneCallback: (sources: List<Source>) -> Unit) {
-
+    fun findSourcesByName(name: String, doneCallback: (sources: List<Source>?) -> Unit) {
+        mDatabase.getReference(SOURCES_PATH)
+            .orderByChild(NAME_PATH)
+            .equalTo(name)
+            .addListenerForSingleValueEvent(ThrowingValueEventListener {
+                if (it.exists()) {
+                    val sources: List<Source> = it.children.map { snapshot ->
+                        snapshot.getValue(Source::class.java)!!
+                    }
+                    doneCallback(sources)
+                } else {
+                    doneCallback(null)
+                }
+            })
     }
 
 }

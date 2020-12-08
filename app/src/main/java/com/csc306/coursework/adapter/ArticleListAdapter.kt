@@ -33,33 +33,12 @@ class ArticleListAdapter(
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val article: Article = articles[position]
         holder.sourceTextView.text = article.source
-        holder.publishedTextView.text = calculateTimeSincePublished(article.publishDateMillis)
+        holder.publishedTextView.text = article.getTimeSincePublishedString(context)
         if (StringUtils.isNotBlank(article.imageURL)) {
             Picasso.get().load(article.imageURL).into(holder.imageView)
         }
         holder.titleTextView.text = article.title
         holder.descriptionTextView.text = article.description
-    }
-
-    private fun calculateTimeSincePublished(publishDateMillis: Long): String {
-        val diff: Long = System.currentTimeMillis() - publishDateMillis
-        val daysAgo: Long = TimeUnit.MILLISECONDS.toDays(diff)
-        if (daysAgo > 0) {
-            return daysAgo.toString() + context.getString(R.string.days_ago)
-        }
-        val hoursAgo: Long = TimeUnit.MILLISECONDS.toHours(diff)
-        if (hoursAgo > 0) {
-            return hoursAgo.toString() + context.getString(R.string.hours_ago)
-        }
-        val minutesAgo: Long = TimeUnit.MILLISECONDS.toMinutes(diff)
-        if (minutesAgo > 0) {
-            return minutesAgo.toString() + context.getString(R.string.minutes_ago)
-        }
-        val secondsAgo: Long = TimeUnit.MILLISECONDS.toSeconds(diff)
-        if (secondsAgo > 0) {
-            return secondsAgo.toString() + context.getString(R.string.seconds_ago)
-        }
-        return context.getString(R.string.now)
     }
 
     private fun likeArticle(position: Int, view: View) {

@@ -1,6 +1,9 @@
 package com.csc306.coursework.model
 
+import android.content.Context
+import com.csc306.coursework.R
 import org.apache.commons.lang3.StringUtils
+import java.util.concurrent.TimeUnit
 
 class Article(
     val source: String,
@@ -33,6 +36,27 @@ class Article(
 
     fun toArticleDTO(): ArticleDTO {
         return ArticleDTO(source, publishDateMillis, imageURL, title, description, articleURL, titleKeywords)
+    }
+
+    fun getTimeSincePublishedString(context: Context): String {
+        val diff: Long = System.currentTimeMillis() - publishDateMillis
+        val daysAgo: Long = TimeUnit.MILLISECONDS.toDays(diff)
+        if (daysAgo > 0) {
+            return daysAgo.toString() + context.getString(R.string.days_ago)
+        }
+        val hoursAgo: Long = TimeUnit.MILLISECONDS.toHours(diff)
+        if (hoursAgo > 0) {
+            return hoursAgo.toString() + context.getString(R.string.hours_ago)
+        }
+        val minutesAgo: Long = TimeUnit.MILLISECONDS.toMinutes(diff)
+        if (minutesAgo > 0) {
+            return minutesAgo.toString() + context.getString(R.string.minutes_ago)
+        }
+        val secondsAgo: Long = TimeUnit.MILLISECONDS.toSeconds(diff)
+        if (secondsAgo > 0) {
+            return secondsAgo.toString() + context.getString(R.string.seconds_ago)
+        }
+        return context.getString(R.string.now)
     }
 
     override fun equals(other: Any?): Boolean {

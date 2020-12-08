@@ -22,10 +22,7 @@
             </intent-filter>
         </activity>
         <activity android:name=".activity.FirstTimeSetupActivity" />
-        <activity android:name=".activity.MainActivity">
-            <meta-data android:name="android.app.searchable"
-                android:resource="@xml/searchable" />
-        </activity>
+        <activity android:name=".activity.MainActivity" />
         <activity android:name=".activity.SettingsActivity" />
         <activity android:name=".activity.UpdateUserProfileActivity" />
         <activity android:name=".activity.UserProfileActivity" />

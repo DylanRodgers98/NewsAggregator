@@ -1,7 +1,6 @@
 package com.csc306.coursework.newsapi
 
 import android.content.Context
-import android.util.Log
 import com.csc306.coursework.R
 import com.csc306.coursework.model.Article
 import com.csc306.coursework.model.Category
