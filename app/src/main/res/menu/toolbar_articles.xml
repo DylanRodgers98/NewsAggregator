@@ -11,6 +11,9 @@
     <item android:id="@+id/toolbar_refresh"
         android:title="@string/refresh" />
 
+    <item android:id="@+id/toolbar_switch_to"
+        android:title="@string/switch_to_recommended" />
+
     <item android:id="@+id/toolbar_settings"
         android:title="@string/settings" />
 

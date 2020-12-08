@@ -32,6 +32,12 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var mRecyclerView: RecyclerView
 
+    private var mSortByLikability: Boolean = false
+
+    private var mLatestArticles: MutableList<Article>? = null
+
+    private var mRecommendedArticles: MutableList<Article>? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         mDatabaseManager = DatabaseManager(this)
@@ -49,7 +55,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStart() {
         super.onStart()
-        buildRecyclerViewAdapter()
+        getArticles()
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -69,6 +75,13 @@ class MainActivity : AppCompatActivity() {
             }
         })
 
+        val switchTo: MenuItem = menu.findItem(R.id.toolbar_switch_to)
+        switchTo.title = getString(if (mSortByLikability) {
+            R.string.switch_to_latest
+        } else {
+            R.string.switch_to_recommended
+        })
+
         return super.onCreateOptionsMenu(menu)
     }
 
@@ -76,8 +89,24 @@ class MainActivity : AppCompatActivity() {
         when (item.itemId) {
             R.id.toolbar_refresh -> {
                 Snackbar.make(mRecyclerView, getString(R.string.refreshing), Snackbar.LENGTH_SHORT).show()
-                buildRecyclerViewAdapter()
+                getArticles()
                 return true
+            }
+            R.id.toolbar_switch_to -> {
+                when (item.title) {
+                    getString(R.string.switch_to_latest) -> {
+                        mSortByLikability = false
+                        switchTo(mLatestArticles)
+                        item.title = getString(R.string.switch_to_recommended)
+                        return true
+                    }
+                    getString(R.string.switch_to_recommended) -> {
+                        mSortByLikability = true
+                        switchTo(mRecommendedArticles)
+                        item.title = getString(R.string.switch_to_latest)
+                        return true
+                    }
+                }
             }
             R.id.toolbar_settings -> {
                 startActivity(Intent(applicationContext, SettingsActivity::class.java))
@@ -92,31 +121,46 @@ class MainActivity : AppCompatActivity() {
         return super.onOptionsItemSelected(item)
     }
 
-    private fun buildRecyclerViewAdapter() {
+    private fun switchTo(articles: MutableList<Article>?) {
+        mRecyclerView.adapter = null
+        if (articles == null) {
+            getArticles()
+        } else {
+            buildAdapter(articles)
+        }
+    }
+
+    private fun getArticles() {
         val userUid: String = mAuth.currentUser!!.uid
         RealtimeDatabaseManager.getUserFollowingCategories(userUid, ThrowingValueEventListener {
             val stringListType = object : GenericTypeIndicator<List<String>>() {}
-            val categoriesFollowing: List<String>? = it.getValue(stringListType)
-            getArticles(categoriesFollowing?.toTypedArray() ?: emptyArray())
+            val categories: Array<String> = it.getValue(stringListType)?.toTypedArray() ?: emptyArray()
+            val sourceIds: String = mDatabaseManager.getSourceIdsForCategories(categories)
+            mLatestArticles = mNewsApi.getTopHeadlines(sourceIds)
+            if (!mSortByLikability) {
+                buildAdapter(mLatestArticles!!)
+            }
+            sortArticlesByLikability(mLatestArticles!!)
         })
-    }
-
-    private fun getArticles(categoriesFollowing: Array<String>) {
-        val sourceIds: String = mDatabaseManager.getSourceIdsForCategories(categoriesFollowing)
-        val articles: MutableList<Article> = mNewsApi.getTopHeadlines(sourceIds)
-        sortArticlesByLikability(articles)
     }
 
     private fun sortArticlesByLikability(articles: MutableList<Article>) {
         val userUid: String = mAuth.currentUser!!.uid
         val oldestArticle: Long = articles.minOf { it.publishDateMillis }
         RealtimeDatabaseManager.sortArticlesByLikability(userUid, oldestArticle, articles, this) {
-            val adapter = ArticleListAdapter(it.toMutableList(), mAuth, this)
-            mRecyclerView.adapter = adapter
-
-            val itemTouchHelper = ItemTouchHelper(ArticleListAdapter.SwipeCallback(adapter))
-            itemTouchHelper.attachToRecyclerView(mRecyclerView)
+            mRecommendedArticles = it.toMutableList()
+            if (mSortByLikability) {
+                buildAdapter(mRecommendedArticles!!)
+            }
         }
+    }
+
+    private fun buildAdapter(articles: MutableList<Article>) {
+        val adapter = ArticleListAdapter(articles, mAuth, this)
+        mRecyclerView.adapter = adapter
+
+        val itemTouchHelper = ItemTouchHelper(ArticleListAdapter.SwipeCallback(adapter))
+        itemTouchHelper.attachToRecyclerView(mRecyclerView)
     }
 
 }

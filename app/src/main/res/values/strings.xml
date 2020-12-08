@@ -44,4 +44,6 @@
     <string name="user_likes_toolbar_title">\'s Likes</string>
     <string name="search">Search</string>
     <string name="search_hint">Search for articles, sources or users</string>
+    <string name="switch_to_latest">Switch to Latest Articles</string>
+    <string name="switch_to_recommended">Switch to Recommended Articles</string>
 </resources>
