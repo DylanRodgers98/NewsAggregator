@@ -34,7 +34,9 @@ class ArticleListAdapter(
         val article: Article = articles[position]
         holder.sourceTextView.text = article.source
         holder.publishedTextView.text = calculateTimeSincePublished(article.publishDateMillis)
-        Picasso.get().load(article.imageURL).into(holder.imageView)
+        if (StringUtils.isNotBlank(article.imageURL)) {
+            Picasso.get().load(article.imageURL).into(holder.imageView)
+        }
         holder.titleTextView.text = article.title
         holder.descriptionTextView.text = article.description
     }

@@ -18,6 +18,7 @@ import com.csc306.coursework.database.RealtimeDatabaseManager
 import com.google.android.material.snackbar.Snackbar
 import com.google.firebase.auth.FirebaseAuth
 import com.squareup.picasso.Picasso
+import org.apache.commons.lang3.StringUtils
 
 class UserProfileActivity : AppCompatActivity() {
 
@@ -69,7 +70,7 @@ class UserProfileActivity : AppCompatActivity() {
             mToolbar.title = userProfile.displayName + getString(R.string.user_likes_toolbar_title)
             val locationTextView: TextView = findViewById(R.id.location)
             locationTextView.text = userProfile.location
-            if (userProfile.profilePicURI != null) {
+            if (StringUtils.isNotBlank(userProfile.profilePicURI)) {
                 val profilePicImageView: ImageView = findViewById(R.id.profile_pic)
                 Picasso.get().load(userProfile.profilePicURI).into(profilePicImageView)
             }

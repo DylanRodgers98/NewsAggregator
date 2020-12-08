@@ -81,7 +81,9 @@ class UpdateUserProfileActivity : AppCompatActivity() {
             if (userProfile != null) {
                 mDisplayNameTextView.text = userProfile.displayName
                 mLocationTextView.text = userProfile.location
-                Picasso.get().load(userProfile.profilePicURI).into(mProfilePicImageView)
+                if (StringUtils.isNotBlank(userProfile.profilePicURI)) {
+                    Picasso.get().load(userProfile.profilePicURI).into(mProfilePicImageView)
+                }
             }
         }
     }

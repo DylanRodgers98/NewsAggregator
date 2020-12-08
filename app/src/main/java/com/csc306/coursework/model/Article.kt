@@ -21,14 +21,18 @@ class Article(
     )
 
     var titleKeywords: Map<String, Double>? = null
-    var isLikedByCurrentUser: Boolean = false
-    private var likedBy: MutableList<String>? = null
+    var isLiked: Boolean = false
+    var likedBy: MutableList<String>? = null
 
     fun likedBy(userUid: String) {
         if (likedBy == null) {
             likedBy = mutableListOf()
         }
         likedBy!!.add(userUid)
+    }
+
+    fun toArticleDTO(): ArticleDTO {
+        return ArticleDTO(source, publishDateMillis, imageURL, title, description, articleURL, titleKeywords)
     }
 
     override fun equals(other: Any?): Boolean {

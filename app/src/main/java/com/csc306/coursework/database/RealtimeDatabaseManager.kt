@@ -1,13 +1,16 @@
 package com.csc306.coursework.database
 
 import android.content.Context
+import android.util.Log
 import com.csc306.coursework.async.ArticleTitleAnalyser
 import com.csc306.coursework.model.Article
 import com.csc306.coursework.model.LikabilityDTO
 import com.csc306.coursework.model.UserProfile
+import com.google.common.base.Stopwatch
 import com.google.firebase.database.*
 import java.net.URLDecoder
 import java.net.URLEncoder
+import java.util.concurrent.TimeUnit
 
 object RealtimeDatabaseManager {
 
@@ -20,7 +23,6 @@ object RealtimeDatabaseManager {
     private const val DISLIKED_AT_PATH = "dislikedAt"
     private const val ARTICLE_URL_PATH = "articleURL"
     private const val ARTICLES_PATH = "articles"
-    private const val TITLE_KEYWORDS_PATH = "titleKeywords"
     private const val USER_PROFILE_PATH = "profile"
     private const val KEYWORD_LIKABILITY_PATH = "keywordLikability"
     private const val TOTAL_SALIENCE_PATH = "totalSalience"
@@ -55,7 +57,7 @@ object RealtimeDatabaseManager {
         val articleRef: DatabaseReference = mDatabase.getReference(ARTICLES_PATH).child(articleURL)
         articleRef.addListenerForSingleValueEvent(ThrowingValueEventListener {
             if (!it.exists()) {
-                articleRef.setValue(article)
+                articleRef.setValue(article.toArticleDTO())
             }
         })
 
@@ -89,7 +91,7 @@ object RealtimeDatabaseManager {
         val articleRef: DatabaseReference = mDatabase.getReference(ARTICLES_PATH).child(articleURL)
         articleRef.addListenerForSingleValueEvent(ThrowingValueEventListener {
             if (!it.exists()) {
-                articleRef.setValue(article)
+                articleRef.setValue(article.toArticleDTO())
             }
         })
 
@@ -145,36 +147,34 @@ object RealtimeDatabaseManager {
     }
 
     fun sortArticlesByLikability(userUid: String, articles: MutableList<Article>, context: Context, doneCallback: (articles: List<Article>) -> Unit) {
-        removeDislikedArticlesFromList(userUid, articles) {
-            getArticleTitleKeywords(it, context) { analysedArticles ->
-                buildLikabilityDTOs(userUid, analysedArticles.iterator(), mutableListOf()) { likabilityDTOs ->
-                    likabilityDTOs.sortByDescending { likabilityDTO -> likabilityDTO.likabilityFactor }
-                    doneCallback(likabilityDTOs.map { likabilityDTO -> likabilityDTO.article })
+        removeDislikedArticlesFromList(userUid, articles) { articlesDislikesRemoved ->
+            getArticleTitleKeywords(articlesDislikesRemoved, context) { analysedArticles ->
+                sortArticlesByLikability(userUid, analysedArticles) { sortedArticles ->
+                    doneCallback(sortedArticles)
                 }
             }
         }
     }
 
     private fun removeDislikedArticlesFromList(userUid: String, articles: MutableList<Article>, doneCallback: (articles: MutableList<Article>) -> Unit) {
-        val query: Query = mDatabase.getReference(USERS_PATH)
-            .child(userUid)
-            .child(DISLIKES_PATH)
-            .orderByChild(ARTICLE_URL_PATH)
-
-        removeDislikedArticlesFromList(query, articles.iterator().withIndex(), articles, doneCallback)
+        removeDislikedArticlesFromList(userUid, articles.iterator(), mutableListOf(), doneCallback)
     }
 
-    private fun removeDislikedArticlesFromList(query: Query, iterator: Iterator<IndexedValue<Article>>, articles: MutableList<Article>, doneCallback: (articles: MutableList<Article>) -> Unit) {
+    private fun removeDislikedArticlesFromList(userUid: String, iterator: Iterator<Article>, articles: MutableList<Article>, doneCallback: (articles: MutableList<Article>) -> Unit) {
         if (iterator.hasNext()) {
-            val newArticles: MutableList<Article> = articles.toMutableList()
-            val article: IndexedValue<Article> = iterator.next()
-            val articleURL: String = firebaseEncode(article.value.articleURL)
-            query.equalTo(articleURL)
+            val article: Article = iterator.next()
+            val articleURL: String = firebaseEncode(article.articleURL)
+
+            mDatabase.getReference(USERS_PATH)
+                .child(userUid)
+                .child(DISLIKES_PATH)
+                .orderByChild(ARTICLE_URL_PATH)
+                .equalTo(articleURL)
                 .addListenerForSingleValueEvent(ThrowingValueEventListener {
-                    if (it.exists()) {
-                        newArticles.removeAt(article.index)
+                    if (!it.exists()) {
+                        articles.add(article)
                     }
-                    removeDislikedArticlesFromList(query, iterator, newArticles, doneCallback)
+                    removeDislikedArticlesFromList(userUid, iterator, articles, doneCallback)
                 })
         } else {
             doneCallback(articles)
@@ -193,14 +193,13 @@ object RealtimeDatabaseManager {
                 val articleRef: DatabaseReference = mDatabase.getReference(ARTICLES_PATH).child(articleURL)
                 articleRef.addListenerForSingleValueEvent(ThrowingValueEventListener {
                     if (it.exists()) {
-                        val articleData: Map<String, Any> = it.getValue(MAP_STRING_ANY_TYPE)!!
-                        val titleKeywords: Map<String, Double>? = articleData[TITLE_KEYWORDS_PATH] as Map<String, Double>?
-                        article.titleKeywords = titleKeywords
+                        val articleFromDatabase: Article = it.getValue(Article::class.java)!!
+                        article.titleKeywords = articleFromDatabase.titleKeywords
                     } else {
                         val titleKeywords: Map<String, Double>? = ArticleTitleAnalyser(context).execute(article).get()
                         // encode keys to remove illegal characters for storing in Firebase
                         article.titleKeywords = titleKeywords?.mapKeys { entry -> firebaseEncode(entry.key) }
-                        articleRef.setValue(article)
+                        articleRef.setValue(article.toArticleDTO())
                     }
                     articles.add(article)
                     getArticleTitleKeywords(iterator, articles, context, doneCallback)
@@ -217,20 +216,25 @@ object RealtimeDatabaseManager {
         }
     }
 
-    private fun buildLikabilityDTOs(userUid: String, iterator: Iterator<Article>, likabilityDTOs: MutableList<LikabilityDTO>, doneCallback: (articles: MutableList<LikabilityDTO>) -> Unit) {
+    private fun sortArticlesByLikability(userUid: String, articles: MutableList<Article>, doneCallback: (articles: List<Article>) -> Unit) {
+        sortArticlesByLikability(userUid, articles.iterator(), mutableListOf(), doneCallback)
+    }
+
+    private fun sortArticlesByLikability(userUid: String, iterator: Iterator<Article>, likabilityDTOs: MutableList<LikabilityDTO>, doneCallback: (articles: List<Article>) -> Unit) {
         if (iterator.hasNext()) {
             val article: Article = iterator.next()
             if (article.titleKeywords != null) {
                 getLikabilityForArticle(userUid, article.titleKeywords!!) { likabilityFactor ->
                     likabilityDTOs.add(LikabilityDTO(article, likabilityFactor))
-                    buildLikabilityDTOs(userUid, iterator, likabilityDTOs, doneCallback)
+                    sortArticlesByLikability(userUid, iterator, likabilityDTOs, doneCallback)
                 }
             } else {
                 likabilityDTOs.add(LikabilityDTO(article, 0.0))
-                buildLikabilityDTOs(userUid, iterator, likabilityDTOs, doneCallback)
+                sortArticlesByLikability(userUid, iterator, likabilityDTOs, doneCallback)
             }
         } else {
-            doneCallback(likabilityDTOs)
+            likabilityDTOs.sortByDescending { it.likabilityFactor }
+            doneCallback(likabilityDTOs.map { it.article })
         }
     }
 
