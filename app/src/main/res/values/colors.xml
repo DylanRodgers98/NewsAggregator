@@ -4,4 +4,5 @@
     <color name="colorPrimaryDark">#A10202</color>
     <color name="textDark">@android:color/black</color>
     <color name="cardBackgroundLight">#C8C8C8</color>
+    <color name="colorLikedBy">#3B9337</color>
 </resources>

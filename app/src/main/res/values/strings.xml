@@ -47,6 +47,10 @@
     <string name="search_hint">Search for articles, sources or users</string>
     <string name="switch_to_latest">Switch to Latest Articles</string>
     <string name="switch_to_recommended">Switch to Recommended Articles</string>
-    <string name="profile">Profile</string>
+    <string name="profile">My Profile</string>
     <string name="edit_profile">Edit Profile</string>
+    <string name="liked_by">Liked by</string>
+    <string name="you">you</string>
+    <string name="and">and</string>
+    <string name="others">others</string>
 </resources>

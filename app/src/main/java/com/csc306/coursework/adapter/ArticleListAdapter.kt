@@ -11,12 +11,12 @@ import androidx.recyclerview.widget.RecyclerView
 import com.csc306.coursework.R
 import com.csc306.coursework.database.RealtimeDatabaseManager
 import com.csc306.coursework.model.Article
+import com.google.android.gms.common.util.CollectionUtils
 import com.google.android.material.snackbar.Snackbar
 import com.google.firebase.auth.FirebaseAuth
 import com.squareup.picasso.Picasso
 import org.apache.commons.lang3.StringUtils
-import java.lang.StringBuilder
-import java.util.concurrent.TimeUnit
+import kotlin.text.StringBuilder
 
 class ArticleListAdapter(
     private val articles: MutableList<Article>,
@@ -32,6 +32,11 @@ class ArticleListAdapter(
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val article: Article = articles[position]
+        val likedByString: String? = listLikedBy(article)
+        if (likedByString != null) {
+            holder.likedByTextView.text = likedByString
+            holder.likedByTextView.visibility = View.VISIBLE
+        }
         holder.sourceTextView.text = article.source
         holder.publishedTextView.text = article.getTimeSincePublishedString(context)
         if (StringUtils.isNotBlank(article.imageURL)) {
@@ -41,10 +46,75 @@ class ArticleListAdapter(
         holder.descriptionTextView.text = article.description
     }
 
+    private fun listLikedBy(article: Article): String? {
+        if (!CollectionUtils.isEmpty(article.likedBy)) {
+            // Liked by
+            val sb = StringBuilder(context.getString(R.string.liked_by))
+                .append(StringUtils.SPACE)
+
+            if (article.isLiked) {
+                // you
+                sb.append(context.getString(R.string.you))
+
+                if (article.likedBy!!.size == 1) {
+                    // and {display name 0}
+                    sb.append(StringUtils.SPACE)
+                        .append(context.getString(R.string.and))
+                        .append(article.likedBy!![0])
+                } else if (article.likedBy!!.size > 1) {
+                    // , {display name 0} and
+                    sb.append(COMMA_SPACE)
+                        .append(article.likedBy!![0])
+                        .append(context.getString(R.string.and))
+                        .append(StringUtils.SPACE)
+
+                    if (article.likedBy!!.size == 2) {
+                        // {display name 1}
+                        sb.append(article.likedBy!![1])
+                    } else {
+                        // {size - 1} others
+                        sb.append(article.likedBy!!.size - 1)
+                            .append(StringUtils.SPACE)
+                            .append(context.getString(R.string.others))
+                    }
+                }
+            } else {
+                // {display name 0}
+                sb.append(article.likedBy!![0])
+
+                if (article.likedBy!!.size == 2) {
+                    // and {display name 1}
+                    sb.append(StringUtils.SPACE)
+                        .append(context.getString(R.string.and))
+                        .append(StringUtils.SPACE)
+                        .append(article.likedBy!![1])
+                } else if (article.likedBy!!.size > 2) {
+                    // , {display name 1}, and {size - 2} others
+                    sb.append(COMMA_SPACE)
+                        .append(article.likedBy!![1])
+                        .append(COMMA_SPACE)
+                        .append(context.getString(R.string.and))
+                        .append(article.likedBy!!.size - 2)
+                        .append(StringUtils.SPACE)
+                        .append(context.getString(R.string.others))
+                }
+            }
+            return sb.toString()
+        } else if (article.isLiked) {
+            // Liked by you
+            return StringBuilder(context.getString(R.string.liked_by))
+                .append(StringUtils.SPACE)
+                .append(context.getString(R.string.you))
+                .toString()
+        }
+        return null
+    }
+
     private fun likeArticle(position: Int, view: View) {
         if (position < articles.size) {
             val userUid: String = auth.currentUser!!.uid
             val article: Article = articles[position]
+            article.isLiked = true
             notifyItemChanged(position)
             RealtimeDatabaseManager.likeArticle(userUid, article, context)
             showSnackbar(view, context.getString(R.string.you_liked), article.title)
@@ -55,6 +125,7 @@ class ArticleListAdapter(
         if (position < articles.size) {
             val userUid: String = auth.currentUser!!.uid
             val article: Article = articles[position]
+            article.isLiked = false
             removeArticleAt(position)
             RealtimeDatabaseManager.dislikeArticle(userUid, article, context)
             showSnackbar(view, context.getString(R.string.you_disliked), article.title)
@@ -78,6 +149,7 @@ class ArticleListAdapter(
     override fun getItemCount(): Int = articles.size
 
     inner class ViewHolder(layout: View) : RecyclerView.ViewHolder(layout) {
+        val likedByTextView: TextView = itemView.findViewById(R.id.liked_by)
         val sourceTextView: TextView = itemView.findViewById(R.id.source)
         val publishedTextView: TextView = itemView.findViewById(R.id.published)
         val imageView: ImageView = itemView.findViewById(R.id.image)
@@ -111,6 +183,10 @@ class ArticleListAdapter(
             }
         }
 
+    }
+
+    companion object {
+        private const val COMMA_SPACE = ", "
     }
 
 }

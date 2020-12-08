@@ -2,18 +2,11 @@ package com.csc306.coursework.activity
 
 import android.app.SearchManager
 import android.content.Intent
-import android.graphics.Bitmap
-import android.graphics.drawable.BitmapDrawable
-import android.graphics.drawable.Drawable
-import android.media.Image
-import android.os.AsyncTask
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
-import android.widget.ImageView
 import androidx.appcompat.widget.SearchView
-import androidx.appcompat.widget.Toolbar
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -30,10 +23,6 @@ import com.csc306.coursework.newsapi.NewsAPIService
 import com.google.android.material.snackbar.Snackbar
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.*
-import com.squareup.picasso.Callback
-import com.squareup.picasso.Picasso
-import com.squareup.picasso.Target
-import java.lang.Exception
 import java.util.*
 
 class MainActivity : AppCompatActivity() {
@@ -45,8 +34,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var mAuth: FirebaseAuth
 
     private lateinit var mUserUid: String
-
-    private lateinit var mToolbar: Toolbar
 
     private lateinit var mRecyclerView: RecyclerView
 
@@ -62,9 +49,9 @@ class MainActivity : AppCompatActivity() {
         mNewsApi = NewsAPIService(this)
         mAuth = FirebaseAuth.getInstance()
         mUserUid = mAuth.currentUser!!.uid
-        setContentView(R.layout.activity_recycler_and_toolbar)
 
-        mToolbar = findViewById(R.id.toolbar)
+        setContentView(R.layout.activity_recycler_and_toolbar)
+        setSupportActionBar(findViewById(R.id.toolbar))
 
         mRecyclerView = findViewById(R.id.recycler_view)
         mRecyclerView.layoutManager = LinearLayoutManager(this)
@@ -160,12 +147,10 @@ class MainActivity : AppCompatActivity() {
     private fun getArticles() {
         val categoryString: String? = intent.getStringExtra(CategorySelectionAdapter.CATEGORY)
         if (categoryString == null || categoryString == getString(FollowingCategory.FOLLOWING.nameStringResource)) {
-            mToolbar.title = getString(R.string.following)
-            setSupportActionBar(mToolbar)
+            supportActionBar!!.title = getString(R.string.following)
             getFollowedCategories()
         } else {
-            mToolbar.title = categoryString
-            setSupportActionBar(mToolbar)
+            supportActionBar!!.title = categoryString
             val category: Category = Category.valueOf(categoryString.toUpperCase(Locale.getDefault()))
             getArticles(arrayOf(category.toString()))
         }
@@ -181,16 +166,20 @@ class MainActivity : AppCompatActivity() {
 
     private fun getArticles(categories: Array<String>) {
         val sourceIds: String = mDatabaseManager.getSourceIdsForCategories(categories)
-        mLatestArticles = mNewsApi.getTopHeadlines(sourceIds)
-        if (!mSortByLikability) {
-            buildAdapter(mLatestArticles!!)
+        val articles: MutableList<Article> = mNewsApi.getTopHeadlines(sourceIds)
+        val oldestArticle: Long = articles.minOf { it.publishDateMillis }
+        RealtimeDatabaseManager.addArticlesLikedByFollowedUsers(mUserUid, oldestArticle, articles) {
+            it.sortByDescending { article -> article.publishDateMillis }
+            mLatestArticles = it
+            if (!mSortByLikability) {
+                buildAdapter(mLatestArticles!!)
+            }
+            sortArticlesByLikability(mLatestArticles!!)
         }
-        sortArticlesByLikability(mLatestArticles!!)
     }
 
     private fun sortArticlesByLikability(articles: MutableList<Article>) {
-        val oldestArticle: Long = articles.minOf { it.publishDateMillis }
-        RealtimeDatabaseManager.sortArticlesByLikability(mUserUid, oldestArticle, articles, this) {
+        RealtimeDatabaseManager.sortArticlesByLikability(mUserUid, articles, this) {
             mRecommendedArticles = it.toMutableList()
             if (mSortByLikability) {
                 buildAdapter(mRecommendedArticles!!)

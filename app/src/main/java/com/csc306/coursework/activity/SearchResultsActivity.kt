@@ -20,8 +20,6 @@ class SearchResultsActivity : AppCompatActivity() {
 
     private lateinit var mNewsApi: NewsAPIService
 
-    private lateinit var mToolbar: Toolbar
-
     private lateinit var mRecyclerView: RecyclerView
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -29,9 +27,9 @@ class SearchResultsActivity : AppCompatActivity() {
         mNewsApi = NewsAPIService(this)
         setContentView(R.layout.activity_recycler_and_toolbar)
 
-        mToolbar = findViewById(R.id.toolbar)
-        mToolbar.title = getString(R.string.search)
-        setSupportActionBar(mToolbar)
+        val toolbar: Toolbar = findViewById(R.id.toolbar)
+        toolbar.title = getString(R.string.search)
+        setSupportActionBar(toolbar)
 
         mRecyclerView = findViewById(R.id.recycler_view)
         mRecyclerView.layoutManager = LinearLayoutManager(this)
@@ -61,7 +59,7 @@ class SearchResultsActivity : AppCompatActivity() {
     }
 
     private fun search(query: String) {
-        mToolbar.title = getString(R.string.search) + ": \"" + query + "\""
+        supportActionBar!!.title = getString(R.string.search) + ": \"" + query + "\""
         RealtimeDatabaseManager.findUsersWithDisplayName(query) { userProfiles ->
             RealtimeDatabaseManager.findSourcesByName(query) { sources ->
                 val articles: MutableList<Article> = mNewsApi.getEverything(query)

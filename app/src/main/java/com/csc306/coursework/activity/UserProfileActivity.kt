@@ -26,8 +26,6 @@ class UserProfileActivity : AppCompatActivity() {
 
     private lateinit var mRecyclerView: RecyclerView
 
-    private lateinit var mToolbar: Toolbar
-
     private lateinit var mUserUid: String
 
     private lateinit var mBtnFollow: Button
@@ -43,9 +41,7 @@ class UserProfileActivity : AppCompatActivity() {
         mCurrentUserUid = mAuth.currentUser!!.uid
 
         setContentView(R.layout.activity_user_profile)
-
-        mToolbar = findViewById(R.id.toolbar)
-        setSupportActionBar(mToolbar)
+        setSupportActionBar(findViewById(R.id.toolbar))
 
         mBtnFollow = findViewById(R.id.btn_follow)
         mBtnFollow.setOnClickListener {
@@ -57,7 +53,7 @@ class UserProfileActivity : AppCompatActivity() {
                 followUser()
             }
         }
-        setButtonText()
+        setButtonAndToolbarText()
 
         mRecyclerView = findViewById(R.id.recycler_view)
         mRecyclerView.layoutManager = LinearLayoutManager(this)
@@ -67,9 +63,10 @@ class UserProfileActivity : AppCompatActivity() {
         return mUserUid == mCurrentUserUid
     }
 
-    private fun setButtonText() {
+    private fun setButtonAndToolbarText() {
         if (isProfileOfCurrentUser()) {
             mBtnFollow.text = getString(R.string.edit_profile)
+            supportActionBar!!.title = getString(R.string.profile)
         } else {
             RealtimeDatabaseManager.isFollowingUser(mCurrentUserUid, mUserUid) { isFollowing ->
                 mIsFollowing = isFollowing
@@ -105,7 +102,7 @@ class UserProfileActivity : AppCompatActivity() {
             }
             val displayNameTextView: TextView = findViewById(R.id.display_name)
             displayNameTextView.text = userProfile.displayName
-            mToolbar.title = userProfile.displayName + getString(R.string.user_likes_toolbar_title)
+            supportActionBar!!.title = userProfile.displayName + getString(R.string.user_likes_toolbar_title)
             val locationTextView: TextView = findViewById(R.id.location)
             locationTextView.text = userProfile.location
             if (StringUtils.isNotBlank(userProfile.profilePicURI)) {
@@ -117,7 +114,7 @@ class UserProfileActivity : AppCompatActivity() {
 
     private fun getUserLikes() {
         RealtimeDatabaseManager.getUserLikes(mUserUid) { articles ->
-            val adapter = ArticleListAdapter(articles, mAuth, this)
+            val adapter = ArticleListAdapter(articles ?: mutableListOf(), mAuth, this)
             mRecyclerView.adapter = adapter
 
             val itemTouchHelper = ItemTouchHelper(ArticleListAdapter.SwipeCallback(adapter))

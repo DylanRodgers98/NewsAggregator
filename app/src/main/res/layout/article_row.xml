@@ -21,6 +21,19 @@
             android:padding="6dp">
 
             <androidx.appcompat.widget.AppCompatTextView
+                android:id="@+id/liked_by"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_alignParentStart="true"
+                android:paddingStart="6dp"
+                android:paddingEnd="6dp"
+                android:paddingBottom="6dp"
+                android:textColor="@color/colorLikedBy"
+                android:textSize="14sp"
+                android:textStyle="italic"
+                android:visibility="gone"/>
+
+            <androidx.appcompat.widget.AppCompatTextView
                 android:id="@+id/source"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -30,7 +43,9 @@
                 android:paddingBottom="6dp"
                 android:textColor="@color/textDark"
                 android:textSize="18sp"
-                android:textStyle="bold" />
+                android:textStyle="bold"
+                android:layout_below="@+id/liked_by"
+                android:text="BBC News"/>
 
             <androidx.appcompat.widget.AppCompatTextView
                 android:id="@+id/published"
@@ -41,7 +56,9 @@
                 android:paddingTop="2sp"
                 android:paddingEnd="6dp"
                 android:textColor="@color/textDark"
-                android:textSize="16sp" />
+                android:textSize="16sp"
+                android:layout_below="@+id/liked_by"
+                android:text="38m"/>
 
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/image_card"

@@ -152,32 +152,30 @@ object RealtimeDatabaseManager {
         }
     }
 
-    fun sortArticlesByLikability(userUid: String, oldestLikedAtMillis: Long, articles: MutableList<Article>, context: Context, doneCallback: (articles: List<Article>) -> Unit) {
-        addArticlesLikedByFollowedUsers(userUid, oldestLikedAtMillis, articles) { articlesWithLikes ->
-            removeDislikedArticlesFromList(userUid, articlesWithLikes) { articlesWithoutDislikes ->
-                getArticleTitleKeywords(articlesWithoutDislikes, context) { analysedArticles ->
-                    sortArticlesByLikability(userUid, analysedArticles) { sortedArticles ->
-                        doneCallback(sortedArticles)
-                    }
+    fun sortArticlesByLikability(userUid: String, articles: MutableList<Article>, context: Context, doneCallback: (articles: List<Article>) -> Unit) {
+        removeDislikedArticlesFromList(userUid, articles) { articlesWithoutDislikes ->
+            getArticleTitleKeywords(articlesWithoutDislikes, context) { analysedArticles ->
+                sortArticlesByLikability(userUid, analysedArticles) { sortedArticles ->
+                    doneCallback(sortedArticles)
                 }
             }
         }
     }
 
-    private fun addArticlesLikedByFollowedUsers(userUid: String, oldestLikedAtMillis: Long, articles: List<Article>, doneCallback: (articles: MutableList<Article>) -> Unit) {
+    fun addArticlesLikedByFollowedUsers(userUid: String, oldestLikedAtMillis: Long, articles: List<Article>, doneCallback: (articles: MutableList<Article>) -> Unit) {
         mDatabase.getReference(USERS_PATH)
             .child(userUid)
             .child(FOLLOWING_PATH)
             .child(USERS_PATH)
             .addListenerForSingleValueEvent(ThrowingValueEventListener {
-                val followedUserUids: MutableList<String> = mutableListOf()
-                it.children.forEach { snapshot ->
-                    val data: Map<String, String> = snapshot.getValue(MAP_STRING_STRING_TYPE)!!
-                    if (data.size == 1) {
-                        followedUserUids.add(data.values.first())
+                val followedUserUids: List<String> = it.children.map { snapshot ->
+                    snapshot.getValue(String::class.java)!!
+                }
+                getArticlesLikedByUsers(followedUserUids, oldestLikedAtMillis, articles) { articlesWithLikes ->
+                    hasUserLikedAnyArticles(userUid, articlesWithLikes) { returnArticles ->
+                        doneCallback(returnArticles)
                     }
                 }
-                getArticlesLikedByUsers(followedUserUids, oldestLikedAtMillis, articles, doneCallback)
             })
     }
 
@@ -189,14 +187,38 @@ object RealtimeDatabaseManager {
     private fun getArticlesLikedByUsers(iterator: Iterator<String>, oldestLikedAtMillis: Long, articles: MutableMap<Article, Article>, doneCallback: (articles: MutableList<Article>) -> Unit) {
         if (iterator.hasNext()) {
             val userUid: String = iterator.next()
-            getUserLikes(userUid, LIKED_ARTICLE_LIMIT, oldestLikedAtMillis) { likedArticles ->
-                likedArticles.forEach { article ->
-                    articles.getOrPut(article) { article }.likedBy(userUid)
+            getUserLikes(userUid, true, LIKED_ARTICLE_LIMIT, oldestLikedAtMillis) { displayName, likedArticles ->
+                likedArticles?.forEach { article ->
+                    articles.getOrPut(article) { article }.likedBy(displayName!!)
                 }
                 getArticlesLikedByUsers(iterator, oldestLikedAtMillis, articles, doneCallback)
             }
         } else {
             doneCallback(articles.values.toMutableList())
+        }
+    }
+
+    private fun hasUserLikedAnyArticles(userUid: String, articles: MutableList<Article>, doneCallback: (articles: MutableList<Article>) -> Unit) {
+        hasUserLikedAnyArticles(userUid, articles.iterator().withIndex(), articles, doneCallback)
+    }
+
+    private fun hasUserLikedAnyArticles(userUid: String, iterator: Iterator<IndexedValue<Article>>, articles: MutableList<Article>, doneCallback: (articles: MutableList<Article>) -> Unit) {
+        if (iterator.hasNext()) {
+            val indexedArticle: IndexedValue<Article> = iterator.next()
+            val encodedURL: String = firebaseEncode(indexedArticle.value.articleURL)
+            mDatabase.getReference(USERS_PATH)
+                .child(userUid)
+                .child(LIKES_PATH)
+                .orderByChild(ARTICLE_URL_PATH)
+                .equalTo(encodedURL)
+                .addListenerForSingleValueEvent(ThrowingValueEventListener {
+                    if (it.exists()) {
+                        articles[indexedArticle.index].isLiked = true
+                    }
+                    hasUserLikedAnyArticles(userUid, iterator, articles, doneCallback)
+                })
+        } else {
+            doneCallback(articles)
         }
     }
 
@@ -356,30 +378,50 @@ object RealtimeDatabaseManager {
             })
     }
 
-    fun getUserLikes(userUid: String, doneCallback: (articles: MutableList<Article>) -> Unit) {
-        getUserLikes(userUid, ARTICLE_LIMIT, doneCallback)
+    fun getUserLikes(userUid: String, doneCallback: (articles: MutableList<Article>?) -> Unit) {
+        getUserLikes(userUid, false, ARTICLE_LIMIT) { _, articles ->
+            doneCallback(articles)
+        }
     }
 
-    private fun getUserLikes(userUid: String, limit: Int, doneCallback: (articles: MutableList<Article>) -> Unit) {
-        getUserLikes(userUid, limit, null, doneCallback)
+    private fun getUserLikes(userUid: String, getDisplayName: Boolean, limit: Int, doneCallback: (displayName: String?, articles: MutableList<Article>?) -> Unit) {
+        getUserLikes(userUid, getDisplayName, limit, null, doneCallback)
     }
 
-    private fun getUserLikes(userUid: String, limit: Int, oldestLikedAtMillis: Long?, doneCallback: (articles: MutableList<Article>) -> Unit) {
-        var query: Query = mDatabase.getReference(USERS_PATH)
-            .child(userUid)
-            .child(LIKES_PATH)
+    private fun getUserLikes(userUid: String, getDisplayName: Boolean, limit: Int, oldestLikedAtMillis: Long?, doneCallback: (displayName: String?, articles: MutableList<Article>?) -> Unit) {
+        val userRef: DatabaseReference = mDatabase.getReference(USERS_PATH).child(userUid)
+
+        var likesQuery: Query = userRef.child(LIKES_PATH)
             .orderByChild(LIKED_AT_PATH)
             .limitToFirst(limit)
 
         if (oldestLikedAtMillis != null) {
-            query = query.startAt(oldestLikedAtMillis.toDouble())
+            likesQuery = likesQuery.startAt(oldestLikedAtMillis.toDouble())
         }
 
-        query.addListenerForSingleValueEvent(ThrowingValueEventListener {
-            val articleURLs: List<String> = it.children.map { snapshot ->
-                snapshot.getValue(MAP_STRING_ANY_TYPE)!![ARTICLE_URL_PATH] as String
-            }.reversed() // list ordered by likedAt in ascending order, so need to reverse
-            getArticlesByURLs(articleURLs, doneCallback)
+        likesQuery.addListenerForSingleValueEvent(ThrowingValueEventListener { likes ->
+            if (likes.exists()) {
+                val articleURLs: List<String> = likes.children.map { snapshot ->
+                    snapshot.getValue(MAP_STRING_ANY_TYPE)!![ARTICLE_URL_PATH] as String
+                }.reversed() // list ordered by likedAt in ascending order, so need to reverse
+
+                if (getDisplayName) {
+                    userRef.child(PROFILE_PATH)
+                        .child(DISPLAY_NAME_PATH)
+                        .addListenerForSingleValueEvent(ThrowingValueEventListener {
+                            val displayName: String = it.getValue(String::class.java)!!
+                            getArticlesByURLs(articleURLs) { articles ->
+                                doneCallback(displayName, articles)
+                            }
+                        })
+                } else {
+                    getArticlesByURLs(articleURLs) { articles ->
+                        doneCallback(null, articles)
+                    }
+                }
+            } else {
+                doneCallback(null, null)
+            }
         })
     }
 
