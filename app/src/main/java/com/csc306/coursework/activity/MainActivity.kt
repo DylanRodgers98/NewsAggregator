@@ -99,7 +99,7 @@ class MainActivity : AppCompatActivity() {
             .toList()
             .blockingGet()
 
-        getArticlesLikedByFollowedUsers(articles)
+        sortArticlesByLikability(articles)
     }
 
     private fun buildArticle(articleDto: ArticleDto): Article {
@@ -113,25 +113,11 @@ class MainActivity : AppCompatActivity() {
         )
     }
 
-    private fun getArticlesLikedByFollowedUsers(articles: MutableList<Article>) {
+    private fun sortArticlesByLikability(articles: MutableList<Article>) {
         val userUid: String = mAuth.currentUser!!.uid
-        RealtimeDatabaseManager.getArticlesLikedByFollowedUsers(userUid) {
-            it.forEach { article ->
-                val index: Int = articles.indexOf(article)
-                if (index > -1) {
-                    articles[index] = article
-                } else {
-                    articles.add(article)
-                }
-            }
-            attachAdapterToRecyclerView(articles)
-        }
-    }
-
-    private fun attachAdapterToRecyclerView(articles: MutableList<Article>) {
-        val userUid: String = mAuth.currentUser!!.uid
-        RealtimeDatabaseManager.sortArticlesByLikability(userUid, articles, this) { sortedArticles ->
-            val adapter = ArticleListAdapter(sortedArticles.toMutableList(), mAuth, this)
+        val oldestArticle: Long = articles.minOf { it.publishDateMillis }
+        RealtimeDatabaseManager.sortArticlesByLikability(userUid, oldestArticle, articles, this) {
+            val adapter = ArticleListAdapter(it.toMutableList(), mAuth, this)
             mRecyclerView.adapter = adapter
 
             val itemTouchHelper = ItemTouchHelper(ArticleListAdapter.SwipeCallback(adapter))
