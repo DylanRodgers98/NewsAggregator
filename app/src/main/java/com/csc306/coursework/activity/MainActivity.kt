@@ -1,11 +1,14 @@
 package com.csc306.coursework.activity
 
 import android.annotation.SuppressLint
+import android.app.SearchManager
+import android.content.Context
 import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
+import androidx.appcompat.widget.SearchView
 import androidx.appcompat.widget.Toolbar
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -16,6 +19,7 @@ import com.csc306.coursework.database.DatabaseManager
 import com.csc306.coursework.database.RealtimeDatabaseManager
 import com.csc306.coursework.database.ThrowingValueEventListener
 import com.csc306.coursework.model.Article
+import com.csc306.coursework.newsapi.NewsAPIService
 import com.dfl.newsapi.NewsApiRepository
 import com.dfl.newsapi.model.ArticleDto
 import com.google.android.material.snackbar.Snackbar
@@ -28,7 +32,7 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var mDatabaseManager: DatabaseManager
 
-    private lateinit var mNewsApi: NewsApiRepository
+    private lateinit var mNewsApi: NewsAPIService
 
     private lateinit var mAuth: FirebaseAuth
 
@@ -37,7 +41,7 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         mDatabaseManager = DatabaseManager(this)
-        mNewsApi = NewsApiRepository(getString(R.string.news_api_key))
+        mNewsApi = NewsAPIService(this)
         mAuth = FirebaseAuth.getInstance()
         setContentView(R.layout.activity_recycler_and_toolbar)
 
@@ -56,6 +60,12 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.toolbar_articles, menu)
+
+        val searchManager = getSystemService(Context.SEARCH_SERVICE) as SearchManager
+        (menu.findItem(R.id.search).actionView as SearchView).apply {
+            setSearchableInfo(searchManager.getSearchableInfo(componentName))
+        }
+
         return super.onCreateOptionsMenu(menu)
     }
 
@@ -91,26 +101,8 @@ class MainActivity : AppCompatActivity() {
     @SuppressLint("CheckResult")
     private fun getArticles(categoriesFollowing: Array<String>) {
         val sourceIds: String = mDatabaseManager.getSourceIdsForCategories(categoriesFollowing)
-        val articles: MutableList<Article> = mNewsApi.getTopHeadlines(sources = sourceIds)
-            .subscribeOn(Schedulers.io())
-            .toFlowable()
-            .flatMapIterable { it.articles }
-            .map { buildArticle(it) }
-            .toList()
-            .blockingGet()
-
+        val articles: MutableList<Article> = mNewsApi.getTopHeadlines(sourceIds)
         sortArticlesByLikability(articles)
-    }
-
-    private fun buildArticle(articleDto: ArticleDto): Article {
-        return Article(
-            articleDto.source.name,
-            OffsetDateTime.parse(articleDto.publishedAt).toInstant().toEpochMilli(),
-            articleDto.urlToImage,
-            articleDto.title,
-            articleDto.description,
-            articleDto.url,
-        )
     }
 
     private fun sortArticlesByLikability(articles: MutableList<Article>) {

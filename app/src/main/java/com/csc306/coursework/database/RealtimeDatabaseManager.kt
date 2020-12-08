@@ -4,6 +4,7 @@ import android.content.Context
 import com.csc306.coursework.async.ArticleTitleAnalyser
 import com.csc306.coursework.model.Article
 import com.csc306.coursework.model.LikabilityDTO
+import com.csc306.coursework.model.Source
 import com.csc306.coursework.model.UserProfile
 import com.google.firebase.database.*
 import java.net.URLDecoder
@@ -24,8 +25,10 @@ object RealtimeDatabaseManager {
     private const val KEYWORD_LIKABILITY_PATH = "keywordLikability"
     private const val TOTAL_SALIENCE_PATH = "totalSalience"
     private const val COUNT_PATH = "count"
+    private const val DISPLAY_NAME_PATH = "displayName"
     private const val ARTICLE_LIMIT = 20
     private const val LIKED_ARTICLE_LIMIT = 5
+    private const val MAX_PATH_LENGTH = 700
     private val MAP_STRING_STRING_TYPE = object : GenericTypeIndicator<Map<String, String>>() { }
     private val MAP_STRING_ANY_TYPE = object : GenericTypeIndicator<Map<String, Any>>() { }
     private val MAP_STRING_DOUBLE_TYPE = object : GenericTypeIndicator<Map<String, Double>>() { }
@@ -311,6 +314,7 @@ object RealtimeDatabaseManager {
             .replace("$", "%24")
             .replace("[", "%5B")
             .replace("]", "%5D")
+            .take(MAX_PATH_LENGTH)
     }
 
     private fun firebaseDecode(str: String): String {
@@ -438,6 +442,43 @@ object RealtimeDatabaseManager {
                     }
                 }
             })
+    }
+
+    fun findUsersWithDisplayName(displayName: String, doneCallback: (users: Map<String, UserProfile>?) -> Unit) {
+        mDatabase.getReference(USERS_PATH)
+            .orderByChild("$USER_PROFILE_PATH/$DISPLAY_NAME_PATH")
+            .equalTo(displayName)
+            .addListenerForSingleValueEvent(ThrowingValueEventListener {
+                if (it.exists()) {
+                    val userUids: List<String> = it.children.map { snapshot -> snapshot.key!! }
+                    getUserProfilesByUids(userUids, doneCallback)
+                } else {
+                    doneCallback(null)
+                }
+            })
+    }
+
+    private fun getUserProfilesByUids(userUids: List<String>, doneCallback: (userProfiles: MutableMap<String, UserProfile>) -> Unit) {
+        getUserProfilesByUids(userUids.iterator(), mutableMapOf(), doneCallback)
+    }
+
+    private fun getUserProfilesByUids(iterator: Iterator<String>, userProfiles: MutableMap<String, UserProfile>, doneCallback: (userProfiles: MutableMap<String, UserProfile>) -> Unit) {
+        if (iterator.hasNext()) {
+            val userUid: String = iterator.next()
+            mDatabase.getReference(USERS_PATH)
+                .child(userUid)
+                .child(USER_PROFILE_PATH)
+                .addListenerForSingleValueEvent(ThrowingValueEventListener {
+                    userProfiles[userUid] = it.getValue(UserProfile::class.java)!!
+                    getUserProfilesByUids(iterator, userProfiles, doneCallback)
+                })
+        } else {
+            doneCallback(userProfiles)
+        }
+    }
+
+    fun findSourcesByQuery(query: String, doneCallback: (sources: List<Source>) -> Unit) {
+
     }
 
 }
