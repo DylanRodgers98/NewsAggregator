@@ -13,13 +13,13 @@ import com.google.firebase.auth.FirebaseAuth
 
 class SettingsActivity : AppCompatActivity() {
 
-    private lateinit var mAuth: FirebaseAuth
+    private lateinit var mUserUid: String
 
     private lateinit var mRecyclerView: RecyclerView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        mAuth = FirebaseAuth.getInstance()
+        mUserUid = FirebaseAuth.getInstance().currentUser!!.uid
 
         setContentView(R.layout.activity_recycler_and_toolbar)
 
@@ -42,21 +42,19 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun buildFollowCategoriesAdapter() {
-        val userUid: String = mAuth.currentUser!!.uid
         val valueEventListener = CategoriesFollowingValueEventListener { categoryFollowStateArray ->
             mRecyclerView.adapter = FollowCategoriesAdapter(categoryFollowStateArray, this)
         }
-        RealtimeDatabaseManager.getUserFollowingCategories(userUid, valueEventListener)
+        RealtimeDatabaseManager.getUserFollowingCategories(mUserUid, valueEventListener)
     }
 
     private fun updateUser() {
-        val userUid: String = mAuth.currentUser!!.uid
         val adapter: FollowCategoriesAdapter = mRecyclerView.adapter as FollowCategoriesAdapter
         val categoriesFollowing: List<String> = adapter.categoryState
             .filter { it!!.second } // filter categories selected to be followed
             .map { it!!.first.toString() } // map category name
 
-        RealtimeDatabaseManager.setUserFollowingCategories(userUid, categoriesFollowing)
+        RealtimeDatabaseManager.setUserFollowingCategories(mUserUid, categoriesFollowing)
     }
 
 }

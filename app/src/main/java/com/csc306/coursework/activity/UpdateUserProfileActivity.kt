@@ -25,7 +25,7 @@ import kotlin.Exception
 
 class UpdateUserProfileActivity : AppCompatActivity() {
 
-    private lateinit var mAuth: FirebaseAuth
+    private lateinit var mUserUid: String
 
     private lateinit var mStorage: FirebaseStorage
 
@@ -37,11 +37,13 @@ class UpdateUserProfileActivity : AppCompatActivity() {
 
     private lateinit var mProfilePicImageView: ImageView
 
+    private var mProfilePicURI: String? = null
+
     private var isProfilePicChanged: Boolean = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        mAuth = FirebaseAuth.getInstance()
+        mUserUid = FirebaseAuth.getInstance().currentUser!!.uid
         mStorage = FirebaseStorage.getInstance()
         isFirstTimeSetup = intent.getBooleanExtra(FirstTimeSetupActivity.IS_FIRST_TIME_SETUP, false)
 
@@ -76,12 +78,12 @@ class UpdateUserProfileActivity : AppCompatActivity() {
     }
 
     private fun getUserProfile() {
-        val userUid: String = mAuth.currentUser!!.uid
-        RealtimeDatabaseManager.getUserProfile(userUid) { userProfile ->
+        RealtimeDatabaseManager.getUserProfile(mUserUid) { userProfile ->
             if (userProfile != null) {
                 mDisplayNameTextView.text = userProfile.displayName
                 mLocationTextView.text = userProfile.location
                 if (StringUtils.isNotBlank(userProfile.profilePicURI)) {
+                    mProfilePicURI = userProfile.profilePicURI
                     Picasso.get().load(userProfile.profilePicURI).into(mProfilePicImageView)
                 }
             }
@@ -115,10 +117,9 @@ class UpdateUserProfileActivity : AppCompatActivity() {
     }
 
     private fun updateUserProfile(onSuccess: () -> Unit) {
-        val userUid: String = mAuth.currentUser!!.uid
         if (isProfilePicChanged) {
             val imageRef: StorageReference = mStorage.reference
-                .child("$PROFILE_PIC_PATH/$userUid.jpg")
+                .child("$PROFILE_PIC_PATH/$mUserUid.jpg")
 
             val outputStream = ByteArrayOutputStream()
             mProfilePicImageView.drawToBitmap()
@@ -131,10 +132,10 @@ class UpdateUserProfileActivity : AppCompatActivity() {
                 }
                 imageRef.downloadUrl
             }.addOnSuccessListener { uri ->
-                updateUserProfile(userUid, uri.toString(), onSuccess)
+                updateUserProfile(mUserUid, uri.toString(), onSuccess)
             }
         } else {
-            updateUserProfile(userUid, null, onSuccess)
+            updateUserProfile(mUserUid, mProfilePicURI, onSuccess)
         }
     }
 

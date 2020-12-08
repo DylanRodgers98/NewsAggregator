@@ -25,7 +25,7 @@ class FirstTimeSetupActivity : AppCompatActivity() {
 
     private lateinit var mDatabaseManager: DatabaseManager
 
-    private lateinit var mAuth: FirebaseAuth
+    private lateinit var mUserUid: String
 
     private lateinit var mNewsApi: NewsApiRepository
 
@@ -34,7 +34,7 @@ class FirstTimeSetupActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         mDatabaseManager = DatabaseManager(this)
-        mAuth = FirebaseAuth.getInstance()
+        mUserUid = FirebaseAuth.getInstance().currentUser!!.uid
         mNewsApi = NewsApiRepository(getString(R.string.news_api_key))
 
         updateSources()
@@ -71,11 +71,10 @@ class FirstTimeSetupActivity : AppCompatActivity() {
     }
 
     private fun buildFollowCategoriesAdapter() {
-        val userUid: String = mAuth.currentUser!!.uid
         val valueEventListener = CategoriesFollowingValueEventListener { categoryFollowStateArray ->
             mRecyclerView.adapter = FollowCategoriesAdapter(categoryFollowStateArray, this)
         }
-        RealtimeDatabaseManager.getUserFollowingCategories(userUid, valueEventListener)
+        RealtimeDatabaseManager.getUserFollowingCategories(mUserUid, valueEventListener)
     }
 
     @SuppressLint("CheckResult")
@@ -95,13 +94,12 @@ class FirstTimeSetupActivity : AppCompatActivity() {
     }
 
     private fun setUserFollowingCategories() {
-        val userUid: String = mAuth.currentUser!!.uid
         val adapter: FollowCategoriesAdapter = mRecyclerView.adapter as FollowCategoriesAdapter
         val categoriesFollowing: List<String> = adapter.categoryState
             .filter { it!!.second } // filter categories selected to be followed
             .map { it!!.first.toString() } // map category name
 
-        RealtimeDatabaseManager.setUserFollowingCategories(userUid, categoriesFollowing)
+        RealtimeDatabaseManager.setUserFollowingCategories(mUserUid, categoriesFollowing)
     }
 
     companion object {

@@ -1,6 +1,7 @@
 <resources>
     <string name="app_name">CSC306 Coursework</string>
     <string name="categories_title">Categories</string>
+    <string name="choose_category">Choose Category</string>
     <string name="follow_categories">Select categories to follow</string>
     <string name="business">Business</string>
     <string name="entertainment">Entertainment</string>
@@ -46,4 +47,6 @@
     <string name="search_hint">Search for articles, sources or users</string>
     <string name="switch_to_latest">Switch to Latest Articles</string>
     <string name="switch_to_recommended">Switch to Recommended Articles</string>
+    <string name="profile">Profile</string>
+    <string name="edit_profile">Edit Profile</string>
 </resources>

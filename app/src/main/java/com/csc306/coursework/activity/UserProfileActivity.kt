@@ -32,12 +32,15 @@ class UserProfileActivity : AppCompatActivity() {
 
     private lateinit var mBtnFollow: Button
 
+    private lateinit var mCurrentUserUid: String
+
     private var mIsFollowing: Boolean = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         mAuth = FirebaseAuth.getInstance()
         mUserUid = intent.getStringExtra(USER_UID)!!
+        mCurrentUserUid = mAuth.currentUser!!.uid
 
         setContentView(R.layout.activity_user_profile)
 
@@ -46,18 +49,53 @@ class UserProfileActivity : AppCompatActivity() {
 
         mBtnFollow = findViewById(R.id.btn_follow)
         mBtnFollow.setOnClickListener {
-            if (mIsFollowing) {
+            if (isProfileOfCurrentUser()) {
+                startActivity(Intent(applicationContext, UpdateUserProfileActivity::class.java))
+            } else if (mIsFollowing) {
                 unfollowUser()
             } else {
                 followUser()
             }
         }
-
-        getUserProfile()
-        isCurrentUserFollowing()
+        setButtonText()
 
         mRecyclerView = findViewById(R.id.recycler_view)
         mRecyclerView.layoutManager = LinearLayoutManager(this)
+    }
+
+    private fun isProfileOfCurrentUser(): Boolean {
+        return mUserUid == mCurrentUserUid
+    }
+
+    private fun setButtonText() {
+        if (isProfileOfCurrentUser()) {
+            mBtnFollow.text = getString(R.string.edit_profile)
+        } else {
+            RealtimeDatabaseManager.isFollowingUser(mCurrentUserUid, mUserUid) { isFollowing ->
+                mIsFollowing = isFollowing
+                mBtnFollow.text = getString(if (isFollowing) R.string.unfollow else R.string.follow)
+            }
+        }
+    }
+
+    private fun followUser() {
+        RealtimeDatabaseManager.followUser(mCurrentUserUid, mUserUid) {
+            mIsFollowing = true
+            mBtnFollow.text = getString(R.string.unfollow)
+        }
+    }
+
+    private fun unfollowUser() {
+        RealtimeDatabaseManager.unfollowUser(mCurrentUserUid, mUserUid) {
+            mIsFollowing = false
+            mBtnFollow.text = getString(R.string.follow)
+        }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        getUserProfile()
+        getUserLikes()
     }
 
     private fun getUserProfile() {
@@ -77,33 +115,14 @@ class UserProfileActivity : AppCompatActivity() {
         }
     }
 
-    private fun isCurrentUserFollowing() {
-        val currentUserUid: String = mAuth.currentUser!!.uid
-        RealtimeDatabaseManager.isFollowingUser(currentUserUid, mUserUid) { isFollowing ->
-            mIsFollowing = isFollowing
-            mBtnFollow.text = getString(if (isFollowing) R.string.unfollow else R.string.follow)
-        }
-    }
+    private fun getUserLikes() {
+        RealtimeDatabaseManager.getUserLikes(mUserUid) { articles ->
+            val adapter = ArticleListAdapter(articles, mAuth, this)
+            mRecyclerView.adapter = adapter
 
-    private fun followUser() {
-        val currentUserUid: String = mAuth.currentUser!!.uid
-        RealtimeDatabaseManager.followUser(currentUserUid, mUserUid) {
-            mIsFollowing = true
-            mBtnFollow.text = getString(R.string.unfollow)
+            val itemTouchHelper = ItemTouchHelper(ArticleListAdapter.SwipeCallback(adapter))
+            itemTouchHelper.attachToRecyclerView(mRecyclerView)
         }
-    }
-
-    private fun unfollowUser() {
-        val currentUserUid: String = mAuth.currentUser!!.uid
-        RealtimeDatabaseManager.unfollowUser(currentUserUid, mUserUid) {
-            mIsFollowing = false
-            mBtnFollow.text = getString(R.string.follow)
-        }
-    }
-
-    override fun onStart() {
-        super.onStart()
-        getUserLikes()
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -129,16 +148,6 @@ class UserProfileActivity : AppCompatActivity() {
             }
         }
         return super.onOptionsItemSelected(item)
-    }
-
-    private fun getUserLikes() {
-        RealtimeDatabaseManager.getUserLikes(mUserUid) { articles ->
-            val adapter = ArticleListAdapter(articles, mAuth, this)
-            mRecyclerView.adapter = adapter
-
-            val itemTouchHelper = ItemTouchHelper(ArticleListAdapter.SwipeCallback(adapter))
-            itemTouchHelper.attachToRecyclerView(mRecyclerView)
-        }
     }
 
     companion object {

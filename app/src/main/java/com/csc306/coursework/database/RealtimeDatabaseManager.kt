@@ -33,7 +33,7 @@ object RealtimeDatabaseManager {
     private const val PROFILE_PIC_URI_PATH = "profilePicURI"
     private const val ARTICLE_LIMIT = 20
     private const val LIKED_ARTICLE_LIMIT = 5
-    private const val MAX_PATH_LENGTH = 700
+    private const val MAX_PATH_LENGTH = 400
     private val MAP_STRING_STRING_TYPE = object : GenericTypeIndicator<Map<String, String>>() { }
     private val MAP_STRING_ANY_TYPE = object : GenericTypeIndicator<Map<String, Any>>() { }
     private val MAP_STRING_MAP_STRING_ANY_TYPE = object : GenericTypeIndicator<Map<String, Map<String, Any>>>() { }

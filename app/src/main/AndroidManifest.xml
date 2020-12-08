@@ -22,16 +22,12 @@
             </intent-filter>
         </activity>
         <activity android:name=".activity.FirstTimeSetupActivity" />
-        <activity android:name=".activity.MainActivity" />
-        <activity android:name=".activity.SettingsActivity" />
         <activity android:name=".activity.UpdateUserProfileActivity" />
+        <activity android:name=".activity.ChooseCategoryActivity" />
+        <activity android:name=".activity.MainActivity" />
+        <activity android:name=".activity.SearchResultsActivity" />
         <activity android:name=".activity.UserProfileActivity" />
-        <activity android:name=".activity.SearchResultsActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.SEARCH" />
-            </intent-filter>
-        </activity>
-
-</application>
+        <activity android:name=".activity.SettingsActivity" />
+    </application>
 
 </manifest>

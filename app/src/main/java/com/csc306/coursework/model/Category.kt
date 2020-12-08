@@ -3,7 +3,11 @@ package com.csc306.coursework.model
 import com.csc306.coursework.R
 import java.util.Locale
 
-enum class Category(val nameStringResource: Int, val imageDrawableResource: Int) {
+enum class Category(
+    override val nameStringResource: Int,
+    override val imageDrawableResource: Int
+) : ICategory {
+
     GENERAL(R.string.general, R.drawable.general),
     BUSINESS(R.string.business, R.drawable.business),
     HEALTH(R.string.health, R.drawable.health),
@@ -15,4 +19,5 @@ enum class Category(val nameStringResource: Int, val imageDrawableResource: Int)
     override fun toString(): String {
         return name.toLowerCase(Locale.getDefault())
     }
+
 }
