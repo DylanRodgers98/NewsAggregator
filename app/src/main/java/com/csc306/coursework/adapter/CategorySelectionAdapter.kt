@@ -10,9 +10,8 @@ import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.csc306.coursework.R
 import com.csc306.coursework.activity.MainActivity
-import com.csc306.coursework.model.Category
 import com.csc306.coursework.model.ICategory
-import com.google.android.material.snackbar.Snackbar
+import java.util.*
 
 class CategorySelectionAdapter(
     private val categories: Array<ICategory>,
@@ -39,8 +38,9 @@ class CategorySelectionAdapter(
 
         init {
             itemView.setOnClickListener {
+                val category: String = textView.text.toString().toUpperCase(Locale.getDefault())
                 val intent: Intent = Intent(context, MainActivity::class.java)
-                    .putExtra(CATEGORY, textView.text)
+                    .putExtra(CATEGORY, category)
                 context.startActivity(intent)
             }
         }

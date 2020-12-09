@@ -3,7 +3,7 @@ package com.csc306.coursework.database
 import android.content.Context
 import com.csc306.coursework.async.ArticleTitleAnalyser
 import com.csc306.coursework.model.Article
-import com.csc306.coursework.model.LikabilityDTO
+import com.csc306.coursework.model.Category
 import com.csc306.coursework.model.Source
 import com.csc306.coursework.model.UserProfile
 import com.google.firebase.database.*
@@ -31,9 +31,12 @@ object RealtimeDatabaseManager {
     private const val DISPLAY_NAME_PATH = "displayName"
     private const val LOCATION_PATH = "location"
     private const val PROFILE_PIC_URI_PATH = "profilePicURI"
+    private const val ID_PATH = "id"
+    private const val UPDATED_AT_PATH = "updatedAt"
     private const val ARTICLE_LIMIT = 20
     private const val LIKED_ARTICLE_LIMIT = 5
     private const val MAX_PATH_LENGTH = 400
+    private const val SOURCES_UPDATE_INTERVAL = 1000 * 60 * 60 * 24 // 24 hours
     private val MAP_STRING_STRING_TYPE = object : GenericTypeIndicator<Map<String, String>>() { }
     private val MAP_STRING_ANY_TYPE = object : GenericTypeIndicator<Map<String, Any>>() { }
     private val MAP_STRING_MAP_STRING_ANY_TYPE = object : GenericTypeIndicator<Map<String, Map<String, Any>>>() { }
@@ -283,24 +286,23 @@ object RealtimeDatabaseManager {
     }
 
     private fun sortArticlesByLikability(userUid: String, articles: MutableList<Article>, doneCallback: (articles: List<Article>) -> Unit) {
-        sortArticlesByLikability(userUid, articles.iterator(), mutableListOf(), doneCallback)
+        sortArticlesByLikability(userUid, articles.iterator().withIndex(), articles, doneCallback)
     }
 
-    private fun sortArticlesByLikability(userUid: String, iterator: Iterator<Article>, likabilityDTOs: MutableList<LikabilityDTO>, doneCallback: (articles: List<Article>) -> Unit) {
+    private fun sortArticlesByLikability(userUid: String, iterator: Iterator<IndexedValue<Article>>, articles:  MutableList<Article>, doneCallback: (articles: List<Article>) -> Unit) {
         if (iterator.hasNext()) {
-            val article: Article = iterator.next()
-            if (article.titleKeywords != null) {
-                getLikabilityForArticle(userUid, article.titleKeywords!!) { likabilityFactor ->
-                    likabilityDTOs.add(LikabilityDTO(article, likabilityFactor))
-                    sortArticlesByLikability(userUid, iterator, likabilityDTOs, doneCallback)
+            val article: IndexedValue<Article> = iterator.next()
+            if (article.value.titleKeywords != null) {
+                getLikabilityForArticle(userUid, article.value.titleKeywords!!) { likabilityFactor ->
+                    articles[article.index].likabilityFactor = likabilityFactor
+                    sortArticlesByLikability(userUid, iterator, articles, doneCallback)
                 }
             } else {
-                likabilityDTOs.add(LikabilityDTO(article, 0.0))
-                sortArticlesByLikability(userUid, iterator, likabilityDTOs, doneCallback)
+                sortArticlesByLikability(userUid, iterator, articles, doneCallback)
             }
         } else {
-            likabilityDTOs.sortByDescending { it.likabilityFactor }
-            doneCallback(likabilityDTOs.map { it.article })
+            articles.sortByDescending { it.likabilityFactor }
+            doneCallback(articles)
         }
     }
 
@@ -492,7 +494,7 @@ object RealtimeDatabaseManager {
             })
     }
 
-    fun findUsersWithDisplayName(displayName: String, doneCallback: (users: Map<String, UserProfile>?) -> Unit) {
+    fun findUsersWithDisplayName(displayName: String, doneCallback: (users: Map<String, UserProfile>) -> Unit) {
         mDatabase.getReference(USERS_PATH)
             .orderByChild("$USER_PROFILE_PATH/$DISPLAY_NAME_PATH")
             .equalTo(displayName)
@@ -503,7 +505,7 @@ object RealtimeDatabaseManager {
                     usersData.entries.forEach { (userUid, userData) ->
                         val profileData: Map<String, String> = userData[PROFILE_PATH] as Map<String, String>
                         val userProfile = UserProfile(
-                            profileData[DISPLAY_NAME_PATH]!!,
+                            profileData.getValue(DISPLAY_NAME_PATH),
                             profileData[LOCATION_PATH],
                             profileData[PROFILE_PIC_URI_PATH]
                         )
@@ -511,25 +513,77 @@ object RealtimeDatabaseManager {
                     }
                     doneCallback(users)
                 } else {
-                    doneCallback(null)
+                    doneCallback(emptyMap())
                 }
             })
     }
 
-    fun findSourcesByName(name: String, doneCallback: (sources: List<Source>?) -> Unit) {
+    fun doSourcesNeedUpdating(doneCallback: (shouldUpdate: Boolean) -> Unit) {
         mDatabase.getReference(SOURCES_PATH)
-            .orderByChild(NAME_PATH)
-            .equalTo(name)
+            .child(UPDATED_AT_PATH)
             .addListenerForSingleValueEvent(ThrowingValueEventListener {
                 if (it.exists()) {
-                    val sources: List<Source> = it.children.map { snapshot ->
-                        snapshot.getValue(Source::class.java)!!
+                    val updatedAt: Long = it.getValue(Long::class.java)!!
+                    if (System.currentTimeMillis() >= updatedAt + SOURCES_UPDATE_INTERVAL) {
+                        doneCallback(true)
+                    } else {
+                        doneCallback(false)
                     }
-                    doneCallback(sources)
                 } else {
-                    doneCallback(null)
+                    doneCallback(true)
                 }
             })
+    }
+
+    fun updateSources(sources: Map<String, List<Source>>) {
+        val sourcesRef: DatabaseReference = mDatabase.getReference(SOURCES_PATH)
+        sourcesRef.updateChildren(sources)
+        sourcesRef.child(UPDATED_AT_PATH).setValue(System.currentTimeMillis())
+    }
+
+    fun getSourceIdsForCategories(categories: List<String>, doneCallback: (sourcesString: String) -> Unit) {
+        getSourceIdsForCategories(categories.iterator(), mutableListOf(), doneCallback)
+    }
+
+    private fun getSourceIdsForCategories(iterator: Iterator<String>, sourceIds: MutableList<String>, doneCallback: (sourcesString: String) -> Unit) {
+        if (iterator.hasNext()) {
+            val category: String = iterator.next()
+            mDatabase.getReference(SOURCES_PATH)
+                .child(category)
+                .orderByChild(ID_PATH)
+                .addListenerForSingleValueEvent(ThrowingValueEventListener { snapshot ->
+                    val currentCategorySourceIds: List<String> = snapshot.children.map {
+                        it.getValue(Source::class.java)!!.id
+                    }
+                    sourceIds.addAll(currentCategorySourceIds)
+                    getSourceIdsForCategories(iterator, sourceIds, doneCallback)
+                })
+        } else {
+            doneCallback(sourceIds.joinToString())
+        }
+    }
+
+    fun findSourcesByName(name: String, doneCallback: (sources: List<Source>) -> Unit) {
+        findSourcesByName(name, Category.values().iterator(), mutableListOf(), doneCallback)
+    }
+
+    private fun findSourcesByName(name: String, iterator: Iterator<Category>, sources: MutableList<Source>, doneCallback: (sources: List<Source>) -> Unit) {
+        if (iterator.hasNext()) {
+            val category: Category = iterator.next()
+            mDatabase.getReference(SOURCES_PATH)
+                .child(category.toString())
+                .orderByChild(NAME_PATH)
+                .equalTo(name)
+                .addListenerForSingleValueEvent(ThrowingValueEventListener {
+                    val currentSources: List<Source> = it.children.map { snapshot ->
+                        snapshot.getValue(Source::class.java)!!
+                    }
+                    sources.addAll(currentSources)
+                    findSourcesByName(name, iterator, sources, doneCallback)
+                })
+        } else {
+            doneCallback(sources)
+        }
     }
 
 }

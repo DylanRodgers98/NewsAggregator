@@ -24,6 +24,7 @@ class Article(
     )
 
     var titleKeywords: Map<String, Double>? = null
+    var likabilityFactor: Double = 0.0
     var isLiked: Boolean = false
     var likedBy: MutableList<String>? = null
 

@@ -3,10 +3,10 @@ package com.csc306.coursework.activity
 import android.app.SearchManager
 import android.content.Context
 import android.content.Intent
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
+import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SearchView
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -14,23 +14,22 @@ import androidx.recyclerview.widget.RecyclerView
 import com.csc306.coursework.R
 import com.csc306.coursework.adapter.ArticleListAdapter
 import com.csc306.coursework.adapter.CategorySelectionAdapter
-import com.csc306.coursework.scheduler.NewArticlesScheduler
-import com.csc306.coursework.scheduler.NewArticlesService
-import com.csc306.coursework.database.DatabaseManager
 import com.csc306.coursework.database.RealtimeDatabaseManager
 import com.csc306.coursework.database.ThrowingValueEventListener
 import com.csc306.coursework.model.Article
 import com.csc306.coursework.model.Category
 import com.csc306.coursework.model.FollowingCategory
+import com.csc306.coursework.model.Source
 import com.csc306.coursework.newsapi.NewsAPIService
+import com.csc306.coursework.scheduler.NewArticlesScheduler
+import com.csc306.coursework.scheduler.NewArticlesService
+import com.dfl.newsapi.enums.Language
 import com.google.android.material.snackbar.Snackbar
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.database.*
+import com.google.firebase.database.GenericTypeIndicator
 import java.util.*
 
 class MainActivity : AppCompatActivity() {
-
-    private lateinit var mDatabaseManager: DatabaseManager
 
     private lateinit var mNewsApi: NewsAPIService
 
@@ -48,16 +47,28 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        mDatabaseManager = DatabaseManager(this)
         mNewsApi = NewsAPIService(this)
         mAuth = FirebaseAuth.getInstance()
         mUserUid = mAuth.currentUser!!.uid
+
+        updateSourcesIfNecessary()
 
         setContentView(R.layout.activity_recycler_and_toolbar)
         setSupportActionBar(findViewById(R.id.toolbar))
 
         mRecyclerView = findViewById(R.id.recycler_view)
         mRecyclerView.layoutManager = LinearLayoutManager(this)
+    }
+
+    private fun updateSourcesIfNecessary() {
+        RealtimeDatabaseManager.doSourcesNeedUpdating { shouldUpdate ->
+            if (shouldUpdate) {
+                val defaultLanguage: String = Locale.getDefault().language
+                val languageCode: Language = Language.valueOf(defaultLanguage.toUpperCase(Locale.getDefault()))
+                val categorySourceMap: Map<String, List<Source>> = mNewsApi.getSources(languageCode)
+                RealtimeDatabaseManager.updateSources(categorySourceMap)
+            }
+        }
     }
 
     override fun onStart() {
@@ -150,38 +161,39 @@ class MainActivity : AppCompatActivity() {
 
     private fun getArticles() {
         val categoryString: String? = intent.getStringExtra(CategorySelectionAdapter.CATEGORY)
-        if (categoryString == null || categoryString == getString(FollowingCategory.FOLLOWING.nameStringResource)) {
-            supportActionBar!!.title = getString(R.string.following)
+        if (categoryString == null || FollowingCategory.valueOf(categoryString) == FollowingCategory.FOLLOWING) {
+            supportActionBar!!.title = getString(FollowingCategory.FOLLOWING.nameStringResource)
             getFollowedCategories()
         } else {
-            supportActionBar!!.title = categoryString
-            val category: Category = Category.valueOf(categoryString.toUpperCase(Locale.getDefault()))
-            getArticles(arrayOf(category.toString()))
+            val category: Category = Category.valueOf(categoryString)
+            supportActionBar!!.title = getString(category.nameStringResource)
+            getArticles(listOf(category.toString()))
         }
     }
 
     private fun getFollowedCategories() {
         RealtimeDatabaseManager.getUserFollowingCategories(mUserUid, ThrowingValueEventListener {
             val stringListType = object : GenericTypeIndicator<List<String>>() {}
-            val categories: Array<String> = it.getValue(stringListType)?.toTypedArray() ?: emptyArray()
+            val categories: List<String> = it.getValue(stringListType) ?: emptyList()
             getArticles(categories)
         })
     }
 
-    private fun getArticles(categories: Array<String>) {
-        val sourceIds: String = mDatabaseManager.getSourceIdsForCategories(categories)
-        val articles: MutableList<Article> = mNewsApi.getTopHeadlines(sourceIds)
-        getSharedPreferences(NewArticlesService.SERVICE_PREFERENCES, Context.MODE_PRIVATE).edit()
-            .putLong(NewArticlesService.LAST_UPDATED, System.currentTimeMillis())
-            .apply()
-        val oldestArticle: Long = articles.minOf { it.publishDateMillis }
-        RealtimeDatabaseManager.addArticlesLikedByFollowedUsers(mUserUid, oldestArticle, articles) {
-            it.sortByDescending { article -> article.publishDateMillis }
-            mLatestArticles = it
-            if (!mSortByLikability) {
-                buildAdapter(mLatestArticles!!)
+    private fun getArticles(categories: List<String>) {
+        RealtimeDatabaseManager.getSourceIdsForCategories(categories) { sourceIds ->
+            val articles: MutableList<Article> = mNewsApi.getTopHeadlines(sourceIds)
+            getSharedPreferences(NewArticlesService.SERVICE_PREFERENCES, Context.MODE_PRIVATE).edit()
+                .putLong(NewArticlesService.LAST_UPDATED, System.currentTimeMillis())
+                .apply()
+            val oldestArticle: Long = articles.minOf { it.publishDateMillis }
+            RealtimeDatabaseManager.addArticlesLikedByFollowedUsers(mUserUid, oldestArticle, articles) {
+                it.sortByDescending { article -> article.publishDateMillis }
+                mLatestArticles = it
+                if (!mSortByLikability) {
+                    buildAdapter(mLatestArticles!!)
+                }
+                sortArticlesByLikability(mLatestArticles!!)
             }
-            sortArticlesByLikability(mLatestArticles!!)
         }
     }
 

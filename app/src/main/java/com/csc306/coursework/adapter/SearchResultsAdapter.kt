@@ -17,8 +17,8 @@ import com.squareup.picasso.Picasso
 import org.apache.commons.lang3.StringUtils
 
 class SearchResultsAdapter(
-    private val users: Map<String, UserProfile>?,
-    private val sources: List<Source>?,
+    private val users: Map<String, UserProfile>,
+    private val sources: List<Source>,
     private val articles: List<Article>,
     private val context: Context
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
@@ -70,7 +70,7 @@ class SearchResultsAdapter(
     }
 
     private fun bindUserViewHolder(holder: UserViewHolder, position: Int) {
-        val userEntry: Map.Entry<String, UserProfile> = users!!.entries.toTypedArray()[position]
+        val userEntry: Map.Entry<String, UserProfile> = users.entries.toTypedArray()[position]
         val userUid: String = userEntry.key
         val userProfile: UserProfile = userEntry.value
         if (userProfile.profilePicURI != null) {
@@ -82,7 +82,7 @@ class SearchResultsAdapter(
 
     private fun bindSourceViewHolder(holder: SourceViewHolder, position: Int) {
         val actualPosition: Int = position - getUsersCount()
-        val source: Source = sources!![actualPosition]
+        val source: Source = sources[actualPosition]
         holder.idTextView.text = source.id
         holder.nameTextView.text = source.name
     }
@@ -101,9 +101,9 @@ class SearchResultsAdapter(
 
     override fun getItemCount(): Int = getUsersCount() + getSourcesCount() + getArticlesCount()
 
-    private fun getUsersCount(): Int = users?.size ?: 0
+    private fun getUsersCount(): Int = users.size
 
-    private fun getSourcesCount(): Int = sources?.size ?: 0
+    private fun getSourcesCount(): Int = sources.size
 
     private fun getArticlesCount(): Int = articles.size
 

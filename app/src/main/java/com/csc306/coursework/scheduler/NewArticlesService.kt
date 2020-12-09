@@ -9,19 +9,19 @@ import androidx.core.app.JobIntentService
 import androidx.core.app.NotificationCompat
 import com.csc306.coursework.R
 import com.csc306.coursework.activity.MainActivity
-import com.csc306.coursework.database.DatabaseManager
 import com.csc306.coursework.database.RealtimeDatabaseManager
 import com.csc306.coursework.database.ThrowingValueEventListener
 import com.csc306.coursework.model.Article
+import com.csc306.coursework.model.Source
 import com.csc306.coursework.newsapi.NewsAPIService
+import com.dfl.newsapi.enums.Language
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.GenericTypeIndicator
+import java.util.*
 
 class NewArticlesService : JobIntentService() {
 
     private lateinit var mAuth: FirebaseAuth
-
-    private lateinit var mDatabaseManager: DatabaseManager
 
     private lateinit var mNewsApi: NewsAPIService
 
@@ -30,7 +30,6 @@ class NewArticlesService : JobIntentService() {
     override fun onCreate() {
         super.onCreate()
         mAuth = FirebaseAuth.getInstance()
-        mDatabaseManager = DatabaseManager(this)
         mNewsApi = NewsAPIService(this)
         mNotificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
     }
@@ -41,17 +40,28 @@ class NewArticlesService : JobIntentService() {
             val sharedPreferences = getSharedPreferences(SERVICE_PREFERENCES, Context.MODE_PRIVATE)
             val lastUpdated: Long = sharedPreferences.getLong(LAST_UPDATED, DEFAULT_LAST_UPDATED)
             if (lastUpdated != DEFAULT_LAST_UPDATED) {
-                RealtimeDatabaseManager.getUserFollowingCategories(userUid, ThrowingValueEventListener {
-                    val categories: Array<String> = it.getValue(STRING_LIST_TYPE)?.toTypedArray()
-                        ?: emptyArray()
-                    val sourceIds: String = mDatabaseManager.getSourceIdsForCategories(categories)
-                    val articles: MutableList<Article> = mNewsApi.getTopHeadlines(sourceIds)
-                    sharedPreferences.edit().putLong(LAST_UPDATED, System.currentTimeMillis()).apply()
-                    articles.removeIf { article -> article.publishDateMillis < lastUpdated }
-                    if (articles.size > 0) {
-                        publishNotification(articles.size)
+                RealtimeDatabaseManager.doSourcesNeedUpdating { shouldUpdate ->
+                    if (shouldUpdate) {
+                        val defaultLanguage: String = Locale.getDefault().language
+                        val languageCode: Language = Language.valueOf(defaultLanguage.toUpperCase(
+                            Locale.getDefault()))
+                        val categorySourceMap: Map<String, List<Source>> = mNewsApi.getSources(languageCode)
+                        RealtimeDatabaseManager.updateSources(categorySourceMap)
                     }
-                })
+                    RealtimeDatabaseManager.getUserFollowingCategories(userUid, ThrowingValueEventListener {
+                        val categories: List<String> = it.getValue(STRING_LIST_TYPE) ?: emptyList()
+                        RealtimeDatabaseManager.getSourceIdsForCategories(categories) { sourceIds ->
+                            val articles: MutableList<Article> = mNewsApi.getTopHeadlines(sourceIds)
+                            sharedPreferences.edit()
+                                .putLong(LAST_UPDATED, System.currentTimeMillis())
+                                .apply()
+                            articles.removeIf { article -> article.publishDateMillis < lastUpdated }
+                            if (articles.size > 0) {
+                                publishNotification(articles.size)
+                            }
+                        }
+                    })
+                }
             }
         }
     }
