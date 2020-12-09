@@ -14,6 +14,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.csc306.coursework.R
 import com.csc306.coursework.adapter.ArticleListAdapter
 import com.csc306.coursework.adapter.CategorySelectionAdapter
+import com.csc306.coursework.adapter.SearchResultsAdapter
 import com.csc306.coursework.database.RealtimeDatabaseManager
 import com.csc306.coursework.database.ThrowingValueEventListener
 import com.csc306.coursework.model.Article
@@ -160,26 +161,37 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun getArticles() {
-        val categoryString: String? = intent.getStringExtra(CategorySelectionAdapter.CATEGORY)
-        if (categoryString == null || FollowingCategory.valueOf(categoryString) == FollowingCategory.FOLLOWING) {
-            supportActionBar!!.title = getString(FollowingCategory.FOLLOWING.nameStringResource)
-            getFollowedCategories()
+        val sourceId: String? = intent.getStringExtra(SearchResultsAdapter.SOURCE_ID)
+        if (sourceId != null) {
+            getArticlesBySource(sourceId)
+            supportActionBar!!.title = intent.getStringExtra(SearchResultsAdapter.SOURCE_NAME)
         } else {
-            val category: Category = Category.valueOf(categoryString)
-            supportActionBar!!.title = getString(category.nameStringResource)
-            getArticles(listOf(category.toString()))
+            val categoryString: String? = intent.getStringExtra(CategorySelectionAdapter.CATEGORY)
+            if (categoryString == null || FollowingCategory.valueOf(categoryString) == FollowingCategory.FOLLOWING) {
+                supportActionBar!!.title = getString(FollowingCategory.FOLLOWING.nameStringResource)
+                getFollowedCategories()
+            } else {
+                val category: Category = Category.valueOf(categoryString)
+                supportActionBar!!.title = getString(category.nameStringResource)
+                getArticlesByCategory(listOf(category.toString()))
+            }
         }
+    }
+
+    private fun getArticlesBySource(sourceId: String) {
+        val articles: MutableList<Article> = mNewsApi.getEverythingBySource(sourceId)
+        displayArticles(articles)
     }
 
     private fun getFollowedCategories() {
         RealtimeDatabaseManager.getUserFollowingCategories(mUserUid, ThrowingValueEventListener {
             val stringListType = object : GenericTypeIndicator<List<String>>() {}
             val categories: List<String> = it.getValue(stringListType) ?: emptyList()
-            getArticles(categories)
+            getArticlesByCategory(categories)
         })
     }
 
-    private fun getArticles(categories: List<String>) {
+    private fun getArticlesByCategory(categories: List<String>) {
         RealtimeDatabaseManager.getSourceIdsForCategories(categories) { sourceIds ->
             val articles: MutableList<Article> = mNewsApi.getTopHeadlines(sourceIds)
             getSharedPreferences(NewArticlesService.SERVICE_PREFERENCES, Context.MODE_PRIVATE).edit()
@@ -187,14 +199,18 @@ class MainActivity : AppCompatActivity() {
                 .apply()
             val oldestArticle: Long = articles.minOf { it.publishDateMillis }
             RealtimeDatabaseManager.addArticlesLikedByFollowedUsers(mUserUid, oldestArticle, articles) {
-                it.sortByDescending { article -> article.publishDateMillis }
-                mLatestArticles = it
-                if (!mSortByLikability) {
-                    buildAdapter(mLatestArticles!!)
-                }
-                sortArticlesByLikability(mLatestArticles!!)
+                displayArticles(it)
             }
         }
+    }
+
+    private fun displayArticles(articles: MutableList<Article>) {
+        articles.sortByDescending { article -> article.publishDateMillis }
+        mLatestArticles = articles
+        if (!mSortByLikability) {
+            buildAdapter(mLatestArticles!!)
+        }
+        sortArticlesByLikability(mLatestArticles!!)
     }
 
     private fun sortArticlesByLikability(articles: MutableList<Article>) {

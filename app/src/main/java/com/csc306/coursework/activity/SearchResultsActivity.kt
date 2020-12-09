@@ -61,7 +61,7 @@ class SearchResultsActivity : AppCompatActivity() {
         supportActionBar!!.title = getString(R.string.search) + ": \"" + query + "\""
         RealtimeDatabaseManager.findUsersWithDisplayName(query) { userProfiles ->
             RealtimeDatabaseManager.findSourcesByName(query) { sources ->
-                val articles: MutableList<Article> = mNewsApi.getEverything(query)
+                val articles: MutableList<Article> = mNewsApi.getEverythingByQuery(query)
                 mRecyclerView.adapter = SearchResultsAdapter(userProfiles, sources, articles, this)
             }
         }

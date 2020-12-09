@@ -40,8 +40,18 @@ class NewsAPIService(context: Context) {
             .blockingGet()
     }
 
-    fun getEverything(query: String): MutableList<Article> {
+    fun getEverythingByQuery(query: String): MutableList<Article> {
         return mNewsApi.getEverything(q = query)
+            .subscribeOn(Schedulers.io())
+            .toFlowable()
+            .flatMapIterable { it.articles }
+            .map { buildArticle(it) }
+            .toList()
+            .blockingGet()
+    }
+
+    fun getEverythingBySource(source: String): MutableList<Article> {
+        return mNewsApi.getEverything(sources = source)
             .subscribeOn(Schedulers.io())
             .toFlowable()
             .flatMapIterable { it.articles }

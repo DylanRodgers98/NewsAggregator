@@ -9,6 +9,7 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.csc306.coursework.R
+import com.csc306.coursework.activity.MainActivity
 import com.csc306.coursework.activity.UserProfileActivity
 import com.csc306.coursework.model.Article
 import com.csc306.coursework.model.Source
@@ -124,6 +125,15 @@ class SearchResultsAdapter(
     inner class SourceViewHolder(layout: View) : RecyclerView.ViewHolder(layout) {
         val idTextView: TextView = itemView.findViewById(R.id.id)
         val nameTextView: TextView = itemView.findViewById(R.id.name)
+
+        init {
+            itemView.setOnClickListener {
+                val intent: Intent = Intent(context, MainActivity::class.java)
+                    .putExtra(SOURCE_ID, idTextView.text)
+                    .putExtra(SOURCE_NAME, nameTextView.text)
+                context.startActivity(intent)
+            }
+        }
     }
 
     inner class ArticleViewHolder(layout: View) : RecyclerView.ViewHolder(layout) {
@@ -138,6 +148,8 @@ class SearchResultsAdapter(
         private const val USER_VIEW_TYPE = 1
         private const val SOURCE_VIEW_TYPE = 2
         private const val ARTICLE_VIEW_TYPE = 3
+        const val SOURCE_ID = "SOURCE_ID"
+        const val SOURCE_NAME = "SOURCE_NAME"
     }
 
 }
