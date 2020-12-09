@@ -12,6 +12,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.csc306.coursework.R
 import com.csc306.coursework.adapter.FollowCategoriesAdapter
+import com.csc306.coursework.scheduler.NewArticlesScheduler
 import com.csc306.coursework.database.CategoriesFollowingValueEventListener
 import com.csc306.coursework.database.DatabaseManager
 import com.csc306.coursework.database.RealtimeDatabaseManager
@@ -62,6 +63,7 @@ class FirstTimeSetupActivity : AppCompatActivity() {
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         if (item.itemId == R.id.toolbar_next) {
             setUserFollowingCategories()
+            NewArticlesScheduler.start(this)
             val intent = Intent(applicationContext, UpdateUserProfileActivity::class.java)
                 .putExtra(IS_FIRST_TIME_SETUP, true)
             startActivity(intent)

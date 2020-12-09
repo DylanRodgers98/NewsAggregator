@@ -53,4 +53,6 @@
     <string name="you">you</string>
     <string name="and">and</string>
     <string name="others">others</string>
+    <string name="new_articles_notification_title">New Articles</string>
+    <string name="new_articles_notification_text">There are new articles waiting for you to read</string>
 </resources>

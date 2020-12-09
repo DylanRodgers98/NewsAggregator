@@ -10,6 +10,7 @@ import android.widget.Button
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.csc306.coursework.R
+import com.csc306.coursework.scheduler.NewArticlesScheduler
 import com.google.android.gms.tasks.OnCompleteListener
 import com.google.android.material.snackbar.Snackbar
 import com.google.firebase.auth.AuthResult
@@ -75,6 +76,9 @@ class AuthenticationActivity : AppCompatActivity() {
             if (it.isSuccessful) {
                 clearTextBoxes()
                 val isNewUser: Boolean = it.result!!.additionalUserInfo!!.isNewUser
+                if (!isNewUser) {
+                    NewArticlesScheduler.start(this)
+                }
                 val activity = if (isNewUser) FirstTimeSetupActivity::class.java else MainActivity::class.java
                 startActivity(Intent(applicationContext, activity))
             } else {

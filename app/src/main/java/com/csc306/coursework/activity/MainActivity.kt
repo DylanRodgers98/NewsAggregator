@@ -1,6 +1,7 @@
 package com.csc306.coursework.activity
 
 import android.app.SearchManager
+import android.content.Context
 import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
@@ -13,6 +14,8 @@ import androidx.recyclerview.widget.RecyclerView
 import com.csc306.coursework.R
 import com.csc306.coursework.adapter.ArticleListAdapter
 import com.csc306.coursework.adapter.CategorySelectionAdapter
+import com.csc306.coursework.scheduler.NewArticlesScheduler
+import com.csc306.coursework.scheduler.NewArticlesService
 import com.csc306.coursework.database.DatabaseManager
 import com.csc306.coursework.database.RealtimeDatabaseManager
 import com.csc306.coursework.database.ThrowingValueEventListener
@@ -128,6 +131,7 @@ class MainActivity : AppCompatActivity() {
             }
             R.id.toolbar_log_out -> {
                 mAuth.signOut()
+                NewArticlesScheduler.stop(this)
                 startActivity(Intent(applicationContext, AuthenticationActivity::class.java))
                 return true
             }
@@ -167,6 +171,9 @@ class MainActivity : AppCompatActivity() {
     private fun getArticles(categories: Array<String>) {
         val sourceIds: String = mDatabaseManager.getSourceIdsForCategories(categories)
         val articles: MutableList<Article> = mNewsApi.getTopHeadlines(sourceIds)
+        getSharedPreferences(NewArticlesService.SERVICE_PREFERENCES, Context.MODE_PRIVATE).edit()
+            .putLong(NewArticlesService.LAST_UPDATED, System.currentTimeMillis())
+            .apply()
         val oldestArticle: Long = articles.minOf { it.publishDateMillis }
         RealtimeDatabaseManager.addArticlesLikedByFollowedUsers(mUserUid, oldestArticle, articles) {
             it.sortByDescending { article -> article.publishDateMillis }

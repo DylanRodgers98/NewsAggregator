@@ -8,12 +8,12 @@ import android.view.MenuItem
 import android.widget.Button
 import android.widget.ImageView
 import android.widget.TextView
-import androidx.appcompat.widget.Toolbar
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.csc306.coursework.R
 import com.csc306.coursework.adapter.ArticleListAdapter
+import com.csc306.coursework.scheduler.NewArticlesScheduler
 import com.csc306.coursework.database.RealtimeDatabaseManager
 import com.google.android.material.snackbar.Snackbar
 import com.google.firebase.auth.FirebaseAuth
@@ -140,6 +140,7 @@ class UserProfileActivity : AppCompatActivity() {
             }
             R.id.toolbar_log_out -> {
                 mAuth.signOut()
+                NewArticlesScheduler.stop(this)
                 startActivity(Intent(applicationContext, AuthenticationActivity::class.java))
                 return true
             }
