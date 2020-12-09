@@ -72,7 +72,7 @@ object RealtimeDatabaseManager {
 
         val userRef: DatabaseReference = mDatabase.getReference(USERS_PATH).child(userUid)
 
-        updateLikabilityForKeywords(article, context, userRef, true)
+        updateLikabilityForKeywords(article, context, userRef, true, false)
 
         val userLikesRef: DatabaseReference = userRef.child(LIKES_PATH)
         userLikesRef.orderByChild(ARTICLE_URL_PATH).equalTo(articleURL)
@@ -94,6 +94,32 @@ object RealtimeDatabaseManager {
             })
     }
 
+    fun undoLike(userUid: String, article: Article, context: Context) {
+        val userRef: DatabaseReference = mDatabase.getReference(USERS_PATH).child(userUid)
+        val userLikesRef: DatabaseReference = userRef.child(LIKES_PATH)
+        userLikesRef.orderByChild(ARTICLE_URL_PATH).equalTo(firebaseEncode(article.articleURL))
+            .addListenerForSingleValueEvent(ThrowingValueEventListener {
+                if (it.exists()) {
+                    val dislikeKey: String = it.getValue(MAP_STRING_ANY_TYPE)!!.keys.first()
+                    userLikesRef.child(dislikeKey).removeValue()
+                    updateLikabilityForKeywords(article, context, userRef, false, true)
+                }
+            })
+    }
+
+    fun undoDislike(userUid: String, article: Article, context: Context) {
+        val userRef: DatabaseReference = mDatabase.getReference(USERS_PATH).child(userUid)
+        val userLikesRef: DatabaseReference = userRef.child(DISLIKES_PATH)
+        userLikesRef.orderByChild(ARTICLE_URL_PATH).equalTo(firebaseEncode(article.articleURL))
+            .addListenerForSingleValueEvent(ThrowingValueEventListener {
+                if (it.exists()) {
+                    val likeKey: String = it.getValue(MAP_STRING_ANY_TYPE)!!.keys.first()
+                    userLikesRef.child(likeKey).removeValue()
+                    updateLikabilityForKeywords(article, context, userRef, true, false)
+                }
+            })
+    }
+
     fun dislikeArticle(userUid: String, article: Article, context: Context) {
         val articleURL: String = firebaseEncode(article.articleURL)
 
@@ -106,7 +132,7 @@ object RealtimeDatabaseManager {
 
         val userRef: DatabaseReference = mDatabase.getReference(USERS_PATH).child(userUid)
 
-        updateLikabilityForKeywords(article, context, userRef, false)
+        updateLikabilityForKeywords(article, context, userRef, false, true)
 
         val userDislikesRef: DatabaseReference = userRef.child(DISLIKES_PATH)
         userDislikesRef.orderByChild(ARTICLE_URL_PATH).equalTo(articleURL)
@@ -128,7 +154,7 @@ object RealtimeDatabaseManager {
             })
     }
 
-    private fun updateLikabilityForKeywords(article: Article, context: Context, userRef: DatabaseReference, isPositive: Boolean) {
+    private fun updateLikabilityForKeywords(article: Article, context: Context, userRef: DatabaseReference, isPositive: Boolean, isUndo: Boolean) {
         if (article.titleKeywords == null) {
             article.titleKeywords = ArticleTitleAnalyser(context).execute(article).get()
         }
@@ -137,7 +163,7 @@ object RealtimeDatabaseManager {
 
         article.titleKeywords?.forEach { (keyword, salience) ->
             var totalSalience: Double = if (isPositive) salience else -salience
-            var count = 1.0
+            var count = if (isUndo) -1.0 else 1.0
 
             val encodedKeyword: String = firebaseEncode(keyword)
             val keywordRef: DatabaseReference = keywordLikabilityRef.child(encodedKeyword)

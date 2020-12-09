@@ -3,7 +3,6 @@ package com.csc306.coursework.adapter
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -22,7 +21,7 @@ import org.apache.commons.lang3.StringUtils
 import kotlin.text.StringBuilder
 
 class ArticleListAdapter(
-    private val articles: MutableList<Article>,
+    private var articles: MutableList<Article>,
     private val auth: FirebaseAuth,
     private val context: Context
 ) : RecyclerView.Adapter<ArticleListAdapter.ViewHolder>() {
@@ -121,7 +120,17 @@ class ArticleListAdapter(
             article.isLiked = true
             notifyItemChanged(position)
             RealtimeDatabaseManager.likeArticle(userUid, article, context)
-            showSnackbar(view, context.getString(R.string.you_liked), article.title)
+            val msg: String = StringBuilder(context.getString(R.string.you_liked))
+                .append(StringUtils.SPACE)
+                .append(article.title)
+                .toString()
+            val snackbar = Snackbar.make(view, msg, Snackbar.LENGTH_LONG)
+            snackbar.setAction(context.getString(R.string.undo)) {
+                article.isLiked = false
+                notifyItemChanged(position)
+                RealtimeDatabaseManager.undoLike(userUid, article, context)
+            }
+            snackbar.show()
         }
     }
 
@@ -132,22 +141,33 @@ class ArticleListAdapter(
             article.isLiked = false
             removeArticleAt(position)
             RealtimeDatabaseManager.dislikeArticle(userUid, article, context)
-            showSnackbar(view, context.getString(R.string.you_disliked), article.title)
+            val msg: String = StringBuilder(context.getString(R.string.you_disliked))
+                .append(StringUtils.SPACE)
+                .append(article.title)
+                .toString()
+            val snackbar = Snackbar.make(view, msg, Snackbar.LENGTH_LONG)
+            snackbar.setAction(context.getString(R.string.undo)) {
+                putArticleAt(position, article)
+                RealtimeDatabaseManager.undoDislike(userUid, article, context)
+            }
+            snackbar.show()
         }
-    }
-
-    private fun showSnackbar(view: View, messagePrefix: String, articleTitle: String) {
-        val msg: String = StringBuilder(messagePrefix)
-            .append(StringUtils.SPACE)
-            .append(articleTitle)
-            .toString()
-        Snackbar.make(view, msg, Snackbar.LENGTH_LONG).show()
     }
 
     private fun removeArticleAt(position: Int) {
         articles.removeAt(position)
         notifyItemRemoved(position)
         notifyItemRangeChanged(position, articles.size)
+    }
+
+    private fun putArticleAt(position: Int, article: Article) {
+        val newArticles: MutableList<Article> = mutableListOf()
+        newArticles.addAll(articles.subList(0, position))
+        newArticles.add(article)
+        newArticles.addAll(articles.subList(position, articles.size))
+        articles.clear()
+        articles.addAll(newArticles)
+        notifyDataSetChanged()
     }
 
     override fun getItemCount(): Int = articles.size

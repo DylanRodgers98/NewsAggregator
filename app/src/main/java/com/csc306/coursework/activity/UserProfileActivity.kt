@@ -130,10 +130,6 @@ class UserProfileActivity : AppCompatActivity() {
                 getUserLikes()
                 return true
             }
-            R.id.toolbar_settings -> {
-                startActivity(Intent(applicationContext, SettingsActivity::class.java))
-                return true
-            }
             R.id.toolbar_log_out -> {
                 mAuth.signOut()
                 NewArticlesScheduler.stop(this)

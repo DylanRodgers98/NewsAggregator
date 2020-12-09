@@ -133,8 +133,8 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
             }
-            R.id.toolbar_settings -> {
-                startActivity(Intent(applicationContext, SettingsActivity::class.java))
+            R.id.toolbar_edit_following -> {
+                startActivity(Intent(applicationContext, FollowCategoriesActivity::class.java))
                 return true
             }
             R.id.toolbar_log_out -> {
@@ -202,11 +202,11 @@ class MainActivity : AppCompatActivity() {
 
     private fun displayArticles(articles: MutableList<Article>) {
         articles.sortByDescending { article -> article.publishDateMillis }
-        mLatestArticles = articles
+        mLatestArticles = articles.toMutableList() // copy list to avoid ConcurrentModificationException
         if (!mSortByLikability) {
-            buildAdapter(mLatestArticles!!)
+            buildAdapter(articles)
         }
-        sortArticlesByLikability(mLatestArticles!!)
+        sortArticlesByLikability(articles)
     }
 
     private fun sortArticlesByLikability(articles: MutableList<Article>) {

@@ -30,7 +30,7 @@
     <string name="save">Save</string>
     <string name="refresh">Refresh</string>
     <string name="refreshing">Refreshing…</string>
-    <string name="settings">Settings</string>
+    <string name="edit_following">Edit Following</string>
     <string name="you_liked">You liked</string>
     <string name="you_disliked">You disliked</string>
     <string name="update_profile">Update Profile</string>
@@ -53,4 +53,5 @@
     <string name="others">others</string>
     <string name="new_articles_notification_title">New Articles</string>
     <string name="new_articles_notification_text">There are new articles waiting for you to read</string>
+    <string name="undo">Undo</string>
 </resources>

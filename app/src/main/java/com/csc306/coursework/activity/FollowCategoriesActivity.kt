@@ -11,7 +11,7 @@ import com.csc306.coursework.database.CategoriesFollowingValueEventListener
 import com.csc306.coursework.database.RealtimeDatabaseManager
 import com.google.firebase.auth.FirebaseAuth
 
-class SettingsActivity : AppCompatActivity() {
+class FollowCategoriesActivity : AppCompatActivity() {
 
     private lateinit var mUserUid: String
 
@@ -24,7 +24,7 @@ class SettingsActivity : AppCompatActivity() {
         setContentView(R.layout.activity_recycler_and_toolbar)
 
         val toolbar: Toolbar = findViewById(R.id.toolbar)
-        toolbar.title = getString(R.string.settings)
+        toolbar.title = getString(R.string.edit_following)
         setSupportActionBar(toolbar)
 
         mRecyclerView = findViewById(R.id.recycler_view)
