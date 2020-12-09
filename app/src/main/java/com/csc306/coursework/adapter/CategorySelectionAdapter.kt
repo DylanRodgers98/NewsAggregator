@@ -38,9 +38,8 @@ class CategorySelectionAdapter(
 
         init {
             itemView.setOnClickListener {
-                val category: String = textView.text.toString().toUpperCase(Locale.getDefault())
                 val intent: Intent = Intent(context, MainActivity::class.java)
-                    .putExtra(CATEGORY, category)
+                    .putExtra(CATEGORY, textView.text.toString())
                 context.startActivity(intent)
             }
         }

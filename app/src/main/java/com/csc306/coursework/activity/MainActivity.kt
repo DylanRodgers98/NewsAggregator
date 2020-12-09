@@ -162,14 +162,13 @@ class MainActivity : AppCompatActivity() {
             getArticlesBySource(sourceId)
             supportActionBar!!.title = intent.getStringExtra(SearchResultsAdapter.SOURCE_NAME)
         } else {
-            val categoryString: String? = intent.getStringExtra(CategorySelectionAdapter.CATEGORY)
-            if (categoryString == null || FollowingCategory.valueOf(categoryString) == FollowingCategory.FOLLOWING) {
+            val categoryNameString: String? = intent.getStringExtra(CategorySelectionAdapter.CATEGORY)
+            if (categoryNameString == null || categoryNameString == getString(FollowingCategory.FOLLOWING.nameStringResource)) {
                 supportActionBar!!.title = getString(FollowingCategory.FOLLOWING.nameStringResource)
                 getFollowedCategories()
             } else {
-                val category: Category = Category.valueOf(categoryString)
-                supportActionBar!!.title = getString(category.nameStringResource)
-                getArticlesByCategory(listOf(category.toString()))
+                supportActionBar!!.title = categoryNameString
+                getArticlesByCategory(listOf(categoryNameString.toLowerCase(Locale.getDefault())))
             }
         }
     }
