@@ -54,9 +54,11 @@ class UserProfileActivity : AppCompatActivity() {
             }
         }
         setButtonAndToolbarText()
+        getUserProfile()
 
         mRecyclerView = findViewById(R.id.recycler_view)
         mRecyclerView.layoutManager = LinearLayoutManager(this)
+        getUserLikes()
     }
 
     private fun isProfileOfCurrentUser(): Boolean {
@@ -87,12 +89,6 @@ class UserProfileActivity : AppCompatActivity() {
             mIsFollowing = false
             mBtnFollow.text = getString(R.string.follow)
         }
-    }
-
-    override fun onStart() {
-        super.onStart()
-        getUserProfile()
-        getUserLikes()
     }
 
     private fun getUserProfile() {

@@ -1,6 +1,9 @@
 package com.csc306.coursework.adapter
 
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -44,6 +47,7 @@ class ArticleListAdapter(
         }
         holder.titleTextView.text = article.title
         holder.descriptionTextView.text = article.description
+        holder.articleUrlTextView.text = article.articleURL
     }
 
     private fun listLikedBy(article: Article): String? {
@@ -155,12 +159,12 @@ class ArticleListAdapter(
         val imageView: ImageView = itemView.findViewById(R.id.image)
         val titleTextView: TextView = itemView.findViewById(R.id.title)
         val descriptionTextView: TextView = itemView.findViewById(R.id.description)
+        val articleUrlTextView: TextView = itemView.findViewById(R.id.article_url)
 
         init {
-            itemView.setOnClickListener { view ->
-                val msg = titleTextView.text
-                val snackbar = Snackbar.make(view, "You clicked $msg", Snackbar.LENGTH_LONG)
-                snackbar.show()
+            itemView.setOnClickListener {
+                val articleUrl: String = articleUrlTextView.text.toString()
+                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(articleUrl)))
             }
         }
     }

@@ -59,6 +59,7 @@ class MainActivity : AppCompatActivity() {
 
         mRecyclerView = findViewById(R.id.recycler_view)
         mRecyclerView.layoutManager = LinearLayoutManager(this)
+        getArticles()
     }
 
     private fun updateSourcesIfNecessary() {
@@ -70,11 +71,6 @@ class MainActivity : AppCompatActivity() {
                 RealtimeDatabaseManager.updateSources(categorySourceMap)
             }
         }
-    }
-
-    override fun onStart() {
-        super.onStart()
-        getArticles()
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
